@@ -872,6 +872,17 @@ function renderSongList() {
       more.textContent = `+${tags[t.id].length-3}`; more.style.color = '#555'; more.style.borderColor = '#333';
       tagsDiv.appendChild(more);
     }
+    const meta = trackMeta[t.id];
+    const metaParts = [];
+    const metaYear = meta?.year || (t.releaseDate ? t.releaseDate.slice(0,4) : null);
+    if (metaYear) metaParts.push(metaYear);
+    if (meta?.countries?.length) metaParts.push(meta.countries.join(', '));
+    if (metaParts.length) {
+      const metaLine = document.createElement('div');
+      metaLine.style.cssText = 'font-size:0.63rem;color:#3a3a3a;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+      metaLine.textContent = metaParts.join(' · ');
+      info.appendChild(metaLine);
+    }
     const play = document.createElement('div'); play.className = 'song-play'; play.textContent = t.preview_url ? '▶' : '·';
     info.append(title, artist, tagsDiv); row.append(img, info, play); list.appendChild(row);
   });
