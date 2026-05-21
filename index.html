@@ -45,8 +45,6 @@
   #lib-fill { height: 100%; background: #1db954; border-radius: 3px; transition: width 0.4s ease; width: 0%; }
   #lib-fill.loading { background: repeating-linear-gradient(90deg, #1db954 0px, #1ed760 20px, #1db954 40px); background-size: 80px 100%; animation: shimmer 1s linear infinite; }
   @keyframes shimmer { to { background-position: 80px 0; } }
-  #load-more-btn { font-size: 0.72rem; white-space: nowrap; padding: 0.3rem 0.8rem; }
-  #load-more-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
   /* LAYOUT */
   #app { display: none; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -303,7 +301,7 @@
     <span class="lib-label">Library</span>
     <span class="lib-counts"><span id="lib-loaded">0</span> <em>/</em> <span id="lib-total">—</span> songs loaded</span>
     <div id="lib-track"><div id="lib-fill"></div></div>
-    <button class="btn-outline btn-sm" id="load-more-btn" onclick="loadMoreTracks()">Load next 500</button>
+    <span id="load-status" style="font-size:0.72rem;color:#555"></span>
   </div>
 
   <div class="layout">
@@ -311,6 +309,7 @@
     <div class="sidebar">
       <div class="sidebar-head">
         <span>Genres</span>
+        <button id="export-filter-btn" class="btn-outline btn-sm" onclick="exportFilteredPlaylist()" style="font-size:0.68rem;display:none" title="Export filtered tracks to Spotify playlist">→ Spotify</button>
         <button id="reset-filter-btn" class="btn-outline btn-sm" onclick="showAllSongs()" style="font-size:0.68rem;display:none">Reset</button>
       </div>
       <div class="genre-list" id="genre-list"></div>
@@ -571,7 +570,13 @@ let reviewQueue = [];
 let reviewIndex = 0;
 const audio = document.getElementById('audio-player');
 
-const COLORS = ['#1db954','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e8c','#00bcd4','#ff5722','#8bc34a','#607d8b'];
+const COLORS = [
+  '#1db954','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c',
+  '#e67e22','#e91e8c','#00bcd4','#ff5722','#8bc34a','#607d8b',
+  '#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#dda0dd',
+  '#98d8c8','#f7dc6f','#bb8fce','#85c1e9','#f0b27a','#82e0aa',
+  '#f1948a','#7fb3d3','#a9cce3','#d2b4de','#a3e4d7','#fad7a0',
+];
 let colorIdx = 0;
 
 // ── PERSISTENCE ──
@@ -610,6 +615,15 @@ function loadData() {
     if (!m.countries) m.countries = [];
   });
   colorIdx = genres.length % COLORS.length;
+  // Deduplicate colors across existing genres
+  const usedColors = new Set();
+  genres.forEach(g => {
+    if (usedColors.has(g.color)) {
+      const unused = COLORS.find(c => !usedColors.has(c));
+      g.color = unused || g.color;
+    }
+    usedColors.add(g.color);
+  });
   // Populate datalist for bulk bar
   const dl = document.getElementById('country-datalist');
   if (dl && !dl.hasChildNodes()) COUNTRIES.forEach(c => { const o = document.createElement('option'); o.value = c; dl.appendChild(o); });
@@ -749,35 +763,38 @@ async function loadTracks() {
   if (!me) return;
   document.getElementById('status-user').textContent = me.display_name;
   const knownIds = new Set(tracks.map(t => t.id));
-  if (knownIds.size === 0) {
+  // Check for newly added songs at the top of the library
+  if (knownIds.size > 0) {
+    setStatus('Checking for new songs...');
+    const newTracks = [];
+    let offset = 0, foundExisting = false;
+    while (!foundExisting) {
+      const data = await api('/me/tracks?limit=50&offset=' + offset);
+      if (!data || !data.items || data.items.length === 0) break;
+      totalTracks = data.total;
+      for (const item of data.items) {
+        const t = item.track;
+        if (!t) continue;
+        if (knownIds.has(t.id)) { foundExisting = true; break; }
+        newTracks.push(mapTrack(t));
+      }
+      if (foundExisting || !data.next) break;
+      offset += data.items.length;
+    }
+    if (newTracks.length > 0) {
+      tracks = [...newTracks, ...tracks];
+      currentOffset += newTracks.length;
+      saveData();
+      setStatus(`✓ ${newTracks.length} new song${newTracks.length > 1 ? 's' : ''} added`);
+    }
+  }
+  // Continue fetching if library isn't fully loaded yet
+  if (currentOffset < totalTracks || knownIds.size === 0) {
     isLoading = false;
     await loadMoreTracks(false);
     return;
   }
-  setStatus('Checking for new songs...');
-  const newTracks = [];
-  let offset = 0, foundExisting = false;
-  while (!foundExisting) {
-    const data = await api('/me/tracks?limit=50&offset=' + offset);
-    if (!data || !data.items || data.items.length === 0) break;
-    totalTracks = data.total;
-    for (const item of data.items) {
-      const t = item.track;
-      if (!t) continue;
-      if (knownIds.has(t.id)) { foundExisting = true; break; }
-      newTracks.push(mapTrack(t));
-    }
-    if (foundExisting || !data.next) break;
-    offset += data.items.length;
-  }
-  if (newTracks.length > 0) {
-    tracks = [...newTracks, ...tracks];
-    currentOffset += newTracks.length;
-    saveData();
-    setStatus(`✓ ${newTracks.length} new song${newTracks.length > 1 ? 's' : ''} added`);
-  } else {
-    setStatus(`Library up to date — ${tracks.length.toLocaleString()} tracks loaded`);
-  }
+  setStatus(`All ${tracks.length.toLocaleString()} tracks loaded`);
   isLoading = false;
   updateLibraryBar();
   renderSongList();
@@ -789,32 +806,35 @@ async function loadMoreTracks(reset=false) {
   isLoading = true;
   if (reset) { tracks = []; currentOffset = 0; }
   updateLibraryBar();
-  setStatus('Loading tracks...');
-  let loaded = 0;
   while (true) {
     const data = await api(`/me/tracks?limit=50&offset=${currentOffset}`);
-    if (!data || !data.items) break;
+    if (!data || !data.items || data.items.length === 0) break;
     totalTracks = data.total;
     for (const item of data.items) { if (item.track) tracks.push(mapTrack(item.track)); }
     currentOffset += data.items.length;
-    loaded += data.items.length;
     setProgress(10 + (currentOffset / totalTracks) * 80);
-    setStatus(`Loaded ${tracks.length.toLocaleString()} / ${totalTracks.toLocaleString()} tracks...`);
     updateLibraryBar(); renderSongList(); updateStats();
-    if (!data.next || loaded >= 500) break;
+    if (!data.next) break;
+    // Save periodically so progress isn't lost if page closes
+    if (currentOffset % 500 === 0) saveData();
   }
   isLoading = false;
   setProgress(100);
   setTimeout(() => setProgress(0), 500);
-  const remaining = totalTracks - currentOffset;
-  setStatus(remaining > 0
-    ? `Loaded ${tracks.length.toLocaleString()} tracks. ${remaining.toLocaleString()} more available.`
-    : `All ${tracks.length.toLocaleString()} tracks loaded!`);
+  setStatus(`All ${tracks.length.toLocaleString()} tracks loaded`);
   saveData(); updateLibraryBar(); renderSongList(); updateStats();
 }
 
 // ── GENRES ──
-function nextColor() { return COLORS[colorIdx++ % COLORS.length]; }
+function nextColor() {
+  const used = new Set(genres.map(g => g.color));
+  const unused = COLORS.find(c => !used.has(c));
+  if (unused) return unused;
+  // All colors taken — pick least used
+  const counts = Object.fromEntries(COLORS.map(c => [c, 0]));
+  genres.forEach(g => { if (counts[g.color] !== undefined) counts[g.color]++; });
+  return COLORS.reduce((a, b) => counts[a] <= counts[b] ? a : b);
+}
 
 function addGenre() {
   const name = document.getElementById('new-genre-name').value.trim();
@@ -875,6 +895,7 @@ function buildGenreNode(genre) {
   name.title = 'Double-click to rename';
   name.ondblclick = e => {
     e.stopPropagation();
+    clearTimeout(clickTimer);
     const input = document.createElement('input');
     input.value = genre.name;
     input.style.cssText = 'flex:1;background:#1a1a1a;border:1px solid #1db954;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
@@ -1424,6 +1445,7 @@ function showAllSongs() {
 function updateResetBtn() {
   const visible = selectedGenreFilter.size > 0 || showUncategorizedOnly || selectedYearFilter || selectedCountryFilter || selectedRegionFilter || selectedEnergyFilter;
   document.getElementById('reset-filter-btn').style.display = visible ? 'block' : 'none';
+  document.getElementById('export-filter-btn').style.display = visible ? 'block' : 'none';
 }
 
 // ── AUDIO FEATURES ──
@@ -1890,6 +1912,36 @@ async function exportAllPlaylists() {
   setStatus(`✓ Exported ${tagged.length} playlists`);
 }
 
+async function exportFilteredPlaylist() {
+  const visible = getVisibleTracks();
+  if (!visible.length) { setStatus('No tracks match current filters'); return; }
+  // Build a descriptive playlist name from active filters
+  const parts = [];
+  if (selectedGenreFilter.size > 0)
+    [...selectedGenreFilter].forEach(gid => { const g = getGenre(gid); if (g) parts.push(g.name); });
+  if (selectedYearFilter) parts.push(selectedYearFilter);
+  if (selectedCountryFilter) parts.push(selectedCountryFilter);
+  if (selectedRegionFilter) parts.push(selectedRegionFilter);
+  if (selectedEnergyFilter) parts.push(ENERGY_LABELS[selectedEnergyFilter]);
+  if (showUncategorizedOnly) parts.push('Untagged');
+  const q = document.getElementById('search-input').value.trim();
+  if (q) parts.push(`"${q}"`);
+  const name = `objectsort: ${parts.join(' + ') || 'filtered'} (${visible.length})`;
+  const btn = document.getElementById('export-filter-btn');
+  btn.disabled = true; btn.textContent = 'Exporting...';
+  try {
+    const me = await api('/me');
+    const pl = await api(`/users/${me.id}/playlists`, 'POST', { name, description: 'Exported from objectsort', public: false });
+    const uris = visible.map(t => `spotify:track:${t.id}`);
+    for (let i = 0; i < uris.length; i += 100)
+      await api(`/playlists/${pl.id}/tracks`, 'POST', { uris: uris.slice(i, i + 100) });
+    setStatus(`✓ "${name}" created with ${visible.length} tracks`);
+  } catch(e) {
+    setStatus('Export failed: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '→ Spotify';
+}
+
 function downloadBackup() {
   const backup = {
     version: 1,
@@ -1985,17 +2037,15 @@ function updateLibraryBar() {
   document.getElementById('lib-loaded').textContent = loaded.toLocaleString();
   document.getElementById('lib-total').textContent = total > 0 ? total.toLocaleString() : '—';
   document.getElementById('lib-fill').style.width = total > 0 ? (loaded/total*100) + '%' : '0%';
-  const btn = document.getElementById('load-more-btn');
-  const remaining = total - loaded;
+  const statusEl = document.getElementById('load-status');
   if (isLoading) {
-    btn.disabled = true; btn.textContent = 'Loading...';
+    statusEl.textContent = 'fetching...';
     document.getElementById('lib-fill').classList.add('loading');
-  } else if (remaining <= 0 && total > 0) {
-    btn.disabled = true; btn.textContent = 'All loaded ✓';
+  } else if (total > 0 && loaded >= total) {
+    statusEl.textContent = '✓ complete';
     document.getElementById('lib-fill').classList.remove('loading');
   } else {
-    btn.disabled = false;
-    btn.textContent = remaining > 0 ? `Load next ${Math.min(500,remaining).toLocaleString()}` : 'Load next 500';
+    statusEl.textContent = '';
     document.getElementById('lib-fill').classList.remove('loading');
   }
 }
