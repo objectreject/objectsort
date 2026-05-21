@@ -281,6 +281,12 @@
         </div>
         <div class="filter-chips" id="region-filter-list" style="display:none"></div>
       </div>
+      <div class="filter-section">
+        <div class="filter-head" onclick="toggleFilterSection('energy')">
+          <span>Energy</span><span id="energy-filter-caret">▸</span>
+        </div>
+        <div class="filter-chips" id="energy-filter-list" style="display:none"></div>
+      </div>
       <div style="display:none"><select id="new-genre-parent"><option value="">Top level</option></select></div>
     </div>
 
@@ -360,6 +366,9 @@
             </div>
             <datalist id="country-datalist"></datalist>
           </div>
+
+          <div class="section-label">Energy</div>
+          <div id="energy-selector" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:0.5rem"></div>
 
           <div class="section-label">Your Tags</div>
           <div class="current-tags" id="current-tags"></div>
@@ -484,12 +493,17 @@ const CONTINENT_MAP = {
 };
 const CONTINENTS = ['Africa','Asia','Europe','North America','Oceania','South America'];
 
+const ENERGY_LEVELS = ['high','medium-high','medium','medium-low','low'];
+const ENERGY_LABELS  = { 'high':'High', 'medium-high':'Med-High', 'medium':'Medium', 'medium-low':'Med-Low', 'low':'Low' };
+const ENERGY_COLORS  = { 'high':'#e74c3c', 'medium-high':'#e67e22', 'medium':'#f1c40f', 'medium-low':'#3498db', 'low':'#666' };
+
 let selectedTrackId = null;
 let selectedTrackIds = new Set();
 let selectedGenreFilter = null;
 let selectedYearFilter = null;
 let selectedCountryFilter = null;
 let selectedRegionFilter = null;
+let selectedEnergyFilter = null;
 let countryDropdownContinent = null;
 let yearBucketSize = 5;
 const YEAR_BUCKET_SIZES = [1, 5, 10, 25];
@@ -814,10 +828,16 @@ function renderParentSelect() {
 }
 
 // ── SONG LIST ──
+function isFullyTagged(trackId) {
+  return (tags[trackId]||[]).length > 0 &&
+    (trackMeta[trackId]?.countries?.length || 0) > 0 &&
+    !!trackMeta[trackId]?.year;
+}
+
 function getVisibleTracks() {
   const q = document.getElementById('search-input').value.toLowerCase();
   return tracks.filter(t => {
-    if (showUncategorizedOnly && (tags[t.id]||[]).length > 0) return false;
+    if (showUncategorizedOnly && isFullyTagged(t.id)) return false;
     if (selectedGenreFilter && !(tags[t.id]||[]).includes(selectedGenreFilter)) return false;
     if (selectedYearFilter) {
       const [startStr, endStr] = selectedYearFilter.split('-');
@@ -833,6 +853,7 @@ function getVisibleTracks() {
       const tCountries = trackMeta[t.id]?.countries || [];
       if (!tCountries.some(c => CONTINENT_MAP[c] === selectedRegionFilter)) return false;
     }
+    if (selectedEnergyFilter && trackMeta[t.id]?.energy !== selectedEnergyFilter) return false;
     if (q && !t.title.toLowerCase().includes(q) && !t.artist.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -877,14 +898,28 @@ function renderSongList() {
     const metaYear = meta?.year || (t.releaseDate ? t.releaseDate.slice(0,4) : null);
     if (metaYear) metaParts.push(metaYear);
     if (meta?.countries?.length) metaParts.push(meta.countries.join(', '));
-    if (metaParts.length) {
-      const metaLine = document.createElement('div');
-      metaLine.style.cssText = 'font-size:0.63rem;color:#3a3a3a;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-      metaLine.textContent = metaParts.join(' · ');
-      info.appendChild(metaLine);
+    let metaLine = null;
+    if (metaParts.length || meta?.energy) {
+      metaLine = document.createElement('div');
+      metaLine.style.cssText = 'font-size:0.63rem;color:#3a3a3a;margin-top:2px;display:flex;align-items:center;gap:4px;overflow:hidden';
+      if (metaParts.length) {
+        const txt = document.createElement('span');
+        txt.style.cssText = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+        txt.textContent = metaParts.join(' · ');
+        metaLine.appendChild(txt);
+      }
+      if (meta?.energy) {
+        const dot = document.createElement('span');
+        dot.style.cssText = `width:5px;height:5px;border-radius:50%;background:${ENERGY_COLORS[meta.energy]};flex-shrink:0`;
+        dot.title = ENERGY_LABELS[meta.energy];
+        metaLine.appendChild(dot);
+      }
     }
     const play = document.createElement('div'); play.className = 'song-play'; play.textContent = t.preview_url ? '▶' : '·';
-    info.append(title, artist, tagsDiv); row.append(img, info, play); list.appendChild(row);
+    info.append(title, artist);
+    if (metaLine) info.appendChild(metaLine);
+    info.appendChild(tagsDiv);
+    row.append(img, info, play); list.appendChild(row);
   });
   updateStats();
 }
@@ -1016,7 +1051,7 @@ function toggleFilterSection(type) {
   const open = list.style.display === 'none';
   list.style.display = open ? 'flex' : 'none';
   caret.textContent = open ? '▾' : '▸';
-  if (open) { if (type === 'year') renderYearFilter(); else if (type === 'country') renderCountryFilter(); else if (type === 'region') renderRegionFilter(); }
+  if (open) { if (type === 'year') renderYearFilter(); else if (type === 'country') renderCountryFilter(); else if (type === 'region') renderRegionFilter(); else if (type === 'energy') renderEnergyFilter(); }
 }
 
 function cycleYearBucket() {
@@ -1107,6 +1142,83 @@ function renderRegionFilter() {
   });
 }
 
+function renderEnergySelector(trackId) {
+  const container = document.getElementById('energy-selector');
+  container.innerHTML = '';
+  container.style.cssText = 'position:relative;height:38px;width:100%;margin-bottom:0.25rem';
+  const current = trackMeta[trackId]?.energy || null;
+  const levels = ['low','medium-low','medium','medium-high','high'];
+  const shortLabels = ['Low','Med-L','Med','Med-H','High'];
+
+  // Base track
+  const track = document.createElement('div');
+  track.style.cssText = 'position:absolute;top:8px;left:0;right:0;height:1px;background:#2a2a2a';
+  container.appendChild(track);
+
+  // Colored fill up to selected position
+  if (current) {
+    const idx = levels.indexOf(current);
+    const fill = document.createElement('div');
+    fill.style.cssText = `position:absolute;top:8px;left:0;width:${idx/(levels.length-1)*100}%;height:1px;background:${ENERGY_COLORS[current]}`;
+    container.appendChild(fill);
+  }
+
+  levels.forEach((level, i) => {
+    const pct = i / (levels.length - 1) * 100;
+    const isSelected = current === level;
+    const color = ENERGY_COLORS[level];
+
+    const dot = document.createElement('div');
+    dot.style.cssText = `position:absolute;top:3px;left:${pct}%;transform:translateX(-50%);
+      width:11px;height:11px;border-radius:50%;z-index:1;cursor:pointer;transition:all 0.15s;
+      background:${isSelected ? color : '#1a1a1a'};border:1px solid ${isSelected ? color : '#333'}`;
+    dot.onclick = () => setEnergy(trackId, isSelected ? null : level);
+    dot.onmouseover = () => { if (!isSelected) { dot.style.background='#2a2a2a'; dot.style.borderColor='#444'; } };
+    dot.onmouseout = () => { if (!isSelected) { dot.style.background='#1a1a1a'; dot.style.borderColor='#333'; } };
+    container.appendChild(dot);
+
+    const lbl = document.createElement('div');
+    lbl.style.cssText = `position:absolute;top:19px;left:${pct}%;transform:translateX(-50%);
+      font-size:0.58rem;color:${isSelected ? color : '#444'};white-space:nowrap;cursor:pointer`;
+    lbl.textContent = shortLabels[i];
+    lbl.onclick = () => setEnergy(trackId, isSelected ? null : level);
+    container.appendChild(lbl);
+  });
+}
+
+function setEnergy(trackId, level) {
+  if (!trackMeta[trackId]) trackMeta[trackId] = {};
+  if (level) trackMeta[trackId].energy = level;
+  else delete trackMeta[trackId].energy;
+  saveData();
+  renderEnergySelector(trackId);
+  renderSongList();
+  if (document.getElementById('energy-filter-list').style.display !== 'none') renderEnergyFilter();
+}
+
+function renderEnergyFilter() {
+  const list = document.getElementById('energy-filter-list');
+  list.innerHTML = '';
+  let hasAny = false;
+  ENERGY_LEVELS.forEach(level => {
+    const count = Object.values(trackMeta).filter(m => m.energy === level).length;
+    if (!count) return;
+    hasAny = true;
+    const chip = document.createElement('span');
+    chip.className = 'filter-chip' + (selectedEnergyFilter === level ? ' active' : '');
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${ENERGY_COLORS[level]};flex-shrink:0;display:inline-block;margin-right:4px`;
+    const countEl = document.createElement('span'); countEl.className = 'chip-count'; countEl.textContent = count;
+    chip.append(dot, document.createTextNode(ENERGY_LABELS[level]), countEl);
+    chip.onclick = () => {
+      selectedEnergyFilter = selectedEnergyFilter === level ? null : level;
+      updateResetBtn(); renderSongList(); renderEnergyFilter();
+    };
+    list.appendChild(chip);
+  });
+  if (!hasAny) list.innerHTML = '<span style="font-size:0.7rem;color:#444;padding:0.2rem">No energy tagged yet</span>';
+}
+
 // ── TAG INPUT ──
 function showTagDropdown() {
   if (!selectedTrackId) return;
@@ -1180,7 +1292,7 @@ function filterByGenre(gid) {
 
 function showAllSongs() {
   selectedGenreFilter = null; showUncategorizedOnly = false;
-  selectedYearFilter = null; selectedCountryFilter = null; selectedRegionFilter = null;
+  selectedYearFilter = null; selectedCountryFilter = null; selectedRegionFilter = null; selectedEnergyFilter = null;
   document.getElementById('uncat-toggle').classList.remove('active');
   document.getElementById('reset-filter-btn').style.display = 'none';
   renderSongList(); renderGenreTree();
@@ -1188,10 +1300,11 @@ function showAllSongs() {
   if (document.getElementById('year-filter-list').style.display !== 'none') renderYearFilter();
   if (document.getElementById('country-filter-list').style.display !== 'none') renderCountryFilter();
   if (document.getElementById('region-filter-list').style.display !== 'none') renderRegionFilter();
+  if (document.getElementById('energy-filter-list').style.display !== 'none') renderEnergyFilter();
 }
 
 function updateResetBtn() {
-  const visible = selectedGenreFilter || showUncategorizedOnly || selectedYearFilter || selectedCountryFilter || selectedRegionFilter;
+  const visible = selectedGenreFilter || showUncategorizedOnly || selectedYearFilter || selectedCountryFilter || selectedRegionFilter || selectedEnergyFilter;
   document.getElementById('reset-filter-btn').style.display = visible ? 'block' : 'none';
 }
 
@@ -1219,6 +1332,7 @@ function renderMeta(track) {
 
   document.getElementById('country-input').value = '';
   renderCountryTagChips(track.id);
+  renderEnergySelector(track.id);
 }
 
 function acceptSuggestedYear(trackId, year) {
@@ -1271,62 +1385,11 @@ function showCountryDropdown() {
   if (!selectedTrackId) return;
   const input = document.getElementById('country-input');
   const dropdown = document.getElementById('country-dropdown');
-  const q = input.value.trim();
-  const ql = q.toLowerCase();
+  const q = input.value.toLowerCase().trim();
   const existing = trackMeta[selectedTrackId]?.countries || [];
-
-  // Check if the query matches a continent name exactly (case-insensitive)
-  const matchedContinent = CONTINENTS.find(c => c.toLowerCase() === ql);
-  if (matchedContinent) countryDropdownContinent = matchedContinent;
-
+  const matches = COUNTRIES.filter(c => !existing.includes(c) && (!q || c.toLowerCase().includes(q))).slice(0, 12);
   dropdown.innerHTML = '';
-
-  // When empty: show continent pills
-  if (!q) {
-    countryDropdownContinent = null;
-    const pillRow = document.createElement('div');
-    pillRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;padding:0.3rem 0.5rem;border-bottom:1px solid #1e1e1e';
-    CONTINENTS.forEach(cont => {
-      const pill = document.createElement('span');
-      pill.textContent = cont;
-      pill.style.cssText = 'font-size:0.65rem;padding:2px 6px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;color:#666;cursor:pointer;white-space:nowrap';
-      pill.onmouseover = () => { pill.style.background = '#222'; pill.style.color = '#bbb'; };
-      pill.onmouseout = () => { pill.style.background = '#1a1a1a'; pill.style.color = '#666'; };
-      pill.onmousedown = e => { e.preventDefault(); countryDropdownContinent = cont; input.value = ''; showCountryDropdown(); };
-      pillRow.appendChild(pill);
-    });
-    dropdown.appendChild(pillRow);
-  }
-
-  // Filter countries: by continent (if selected or matched) or by query text
-  let pool = COUNTRIES.filter(c => !existing.includes(c));
-  if (countryDropdownContinent) {
-    pool = pool.filter(c => CONTINENT_MAP[c] === countryDropdownContinent);
-  } else if (q && !matchedContinent) {
-    pool = pool.filter(c => c.toLowerCase().includes(ql));
-  }
-  pool = pool.slice(0, 12);
-
-  if (countryDropdownContinent && q) {
-    // Show a "clear continent" header
-    const header = document.createElement('div');
-    header.style.cssText = 'padding:0.2rem 0.6rem;font-size:0.65rem;color:#555;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e1e1e';
-    const label = document.createElement('span'); label.textContent = countryDropdownContinent;
-    const clear = document.createElement('span'); clear.textContent = '✕ clear'; clear.style.cssText = 'cursor:pointer;color:#444';
-    clear.onmousedown = e => { e.preventDefault(); countryDropdownContinent = null; input.value = ''; showCountryDropdown(); };
-    header.append(label, clear);
-    dropdown.appendChild(header);
-  } else if (countryDropdownContinent && !q) {
-    const header = document.createElement('div');
-    header.style.cssText = 'padding:0.2rem 0.6rem;font-size:0.65rem;color:#555;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e1e1e';
-    const label = document.createElement('span'); label.textContent = countryDropdownContinent;
-    const clear = document.createElement('span'); clear.textContent = '✕'; clear.style.cssText = 'cursor:pointer;color:#444';
-    clear.onmousedown = e => { e.preventDefault(); countryDropdownContinent = null; showCountryDropdown(); };
-    header.append(label, clear);
-    dropdown.appendChild(header);
-  }
-
-  pool.forEach(c => {
+  matches.forEach(c => {
     const item = document.createElement('div');
     item.style.cssText = 'padding:0.32rem 0.6rem;font-size:0.8rem;cursor:pointer;color:#bbb';
     item.textContent = c;
@@ -1335,7 +1398,7 @@ function showCountryDropdown() {
     item.onmousedown = () => addCountry(selectedTrackId, c);
     dropdown.appendChild(item);
   });
-  dropdown.style.display = (dropdown.children.length > 0) ? 'block' : 'none';
+  dropdown.style.display = matches.length ? 'block' : 'none';
 }
 
 function hideCountryDropdown() {
@@ -1600,7 +1663,7 @@ function removeTag(gid) { toggleTag(gid); }
 
 // ── REVIEW MODE ──
 function startReview() {
-  reviewQueue = tracks.filter(t => (tags[t.id]||[]).length === 0);
+  reviewQueue = tracks.filter(t => !isFullyTagged(t.id));
   if (!reviewQueue.length) { setStatus('No untagged songs to review'); return; }
   reviewIndex = 0; reviewMode = true;
   showUncategorizedOnly = true;
@@ -1781,7 +1844,7 @@ function downloadCSV() {
 
 // ── STATS / UTILS ──
 function updateStats() {
-  const tagged = tracks.filter(t => (tags[t.id]||[]).length > 0).length;
+  const tagged = tracks.filter(t => isFullyTagged(t.id)).length;
   document.getElementById('stat-tagged').textContent = tagged.toLocaleString();
   document.getElementById('stat-untagged').textContent = (tracks.length - tagged).toLocaleString();
   updateLibraryBar();
