@@ -203,6 +203,34 @@
   /* STATUS BAR */
   #statusbar { padding: 0.3rem 1rem; background: #0e0e0e; border-top: 1px solid #1a1a1a; font-size: 0.68rem; color: #444; flex-shrink: 0; display: flex; justify-content: space-between; }
   #load-progress { position: fixed; top: 0; left: 0; height: 2px; background: #1db954; transition: width 0.3s; z-index: 999; }
+
+  /* TAG BUBBLE */
+  @keyframes bubbleIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.94); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1);    }
+  }
+  @keyframes gradientShift {
+    0%   { background-position: 0%   50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0%   50%; }
+  }
+  #tag-bubble.visible {
+    animation: bubbleIn 0.28s cubic-bezier(0.34, 1.5, 0.64, 1) forwards;
+  }
+  .bubble-ring {
+    border-radius: 16px;
+    padding: 1.5px;
+    background: linear-gradient(135deg, #1db954, #3498db, #9b59b6, #e74c3c, #f39c12, #1db954);
+    background-size: 400% 400%;
+    animation: gradientShift 5s ease infinite;
+    box-shadow: 0 0 30px rgba(29,185,84,0.18), 0 0 60px rgba(52,152,219,0.1), 0 20px 60px rgba(0,0,0,0.95);
+  }
+  .bubble-inner {
+    background: rgba(8,8,8,0.97);
+    border-radius: 15px;
+    padding: 0.75rem 0.85rem 0.6rem;
+    backdrop-filter: blur(24px);
+  }
 </style>
 </head>
 <body>
@@ -306,12 +334,6 @@
       </div>
       <div id="bulk-bar" style="flex-wrap:wrap;row-gap:0.4rem">
         <span class="bulk-label" id="bulk-label">0 selected</span>
-        <div class="bulk-input-wrap">
-          <input id="bulk-input" placeholder="Genre..." autocomplete="off"
-            onfocus="showBulkDropdown()" onblur="setTimeout(hideBulkDropdown,150)"
-            oninput="showBulkDropdown()" onkeydown="handleBulkInput(event)" />
-          <div id="bulk-dropdown"></div>
-        </div>
         <input id="bulk-year" type="text" maxlength="4" placeholder="Year..." autocomplete="off"
           style="width:64px;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 0.5rem;color:#eee;font-size:0.78rem;outline:none;font-family:inherit;flex-shrink:0"
           onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
@@ -341,15 +363,10 @@
             <a id="mb-btn" class="detail-link" href="#" target="_blank">musicbrainz ↗</a>
             <a id="everynoise-btn" class="detail-link" href="https://everynoise.com" target="_blank">everynoise ↗</a>
           </div>
-          <div class="section-label" style="margin-top:0.5rem;display:flex;justify-content:space-between;align-items:center">
-            <span>Your Tags</span>
-            <button onclick="showTagBubble()" style="background:transparent;border:1px solid #2a2a2a;border-radius:4px;color:#555;font-size:0.68rem;padding:1px 6px;cursor:pointer;font-family:inherit"
-              onmouseover="this.style.borderColor='#1db954';this.style.color='#1db954'"
-              onmouseout="this.style.borderColor='#2a2a2a';this.style.color='#555'">＋ Tag</button>
-          </div>
-          <div class="current-tags" id="current-tags"></div>
+          <div class="section-label" style="margin-top:0.5rem">Your Tags</div>
+          <div class="current-tags" id="current-tags" style="margin-bottom:1.2rem"></div>
 
-          <div class="audio-bar" style="margin-top:1rem">
+          <div class="audio-bar">
             <button id="audio-btn" onclick="togglePlay()">▶</button>
             <div id="audio-progress" onclick="seekAudio(event)"><div id="audio-fill"></div></div>
             <span class="audio-time" id="audio-time">0:00</span>
@@ -394,18 +411,19 @@
   </div>
 
   <!-- FLOATING TAG BUBBLE -->
-  <div id="tag-bubble" style="display:none;position:fixed;bottom:48px;left:50%;transform:translateX(-50%);width:300px;z-index:60">
-    <div style="background:#0f0f0f;border-radius:14px;padding:0.7rem 0.8rem 0.5rem;
-      box-shadow:0 0 0 1px rgba(29,185,84,0.35),0 0 0 3px rgba(52,152,219,0.1),0 12px 40px rgba(0,0,0,0.8)">
-      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem">
-        <input id="tag-input" type="text" placeholder="Search or create genre..." autocomplete="off"
-          style="flex:1;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:0.4rem 0.65rem;color:#eee;font-size:0.82rem;outline:none;font-family:inherit"
-          onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
-          oninput="showTagDropdown()" onkeydown="handleTagInput(event)" />
-        <button onclick="hideTagBubble()" style="background:transparent;border:none;color:#444;font-size:1rem;cursor:pointer;padding:0 2px;line-height:1"
-          onmouseover="this.style.color='#888'" onmouseout="this.style.color='#444'">✕</button>
+  <div id="tag-bubble" style="display:none;position:fixed;bottom:48px;left:50%;transform:translateX(-50%);width:380px;z-index:60">
+    <div class="bubble-ring">
+      <div class="bubble-inner">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem">
+          <input id="tag-input" type="text" placeholder="Search or create genre..." autocomplete="off"
+            style="flex:1;background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:0.4rem 0.65rem;color:#eee;font-size:0.82rem;outline:none;font-family:inherit"
+            onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
+            oninput="showTagDropdown()" onkeydown="handleTagInput(event)" />
+          <button onclick="hideTagBubble()" style="background:transparent;border:none;color:#333;font-size:1rem;cursor:pointer;padding:0 2px;line-height:1"
+            onmouseover="this.style.color='#888'" onmouseout="this.style.color='#333'">✕</button>
+        </div>
+        <div id="tag-dropdown" style="display:none;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:8px;max-height:200px;overflow-y:auto"></div>
       </div>
-      <div id="tag-dropdown" style="display:none;background:#111;border:1px solid #222;border-radius:8px;max-height:200px;overflow-y:auto"></div>
     </div>
   </div>
 
@@ -925,7 +943,9 @@ function renderSongList() {
         metaLine.appendChild(dot);
       }
     }
-    const play = document.createElement('div'); play.className = 'song-play'; play.textContent = t.preview_url ? '▶' : '·';
+    const play = document.createElement('div'); play.className = 'song-play';
+    if (isFullyTagged(t.id)) { play.textContent = '●'; play.style.fontSize = '0.45rem'; play.style.color = 'rgba(29,185,84,0.45)'; }
+    else play.textContent = '';
     info.append(title, artist);
     if (metaLine) info.appendChild(metaLine);
     info.appendChild(tagsDiv);
@@ -1160,12 +1180,19 @@ function renderEnergySelector(trackId) {
   const levels = ['low','medium-low','medium','medium-high','high'];
   const shortLabels = ['Low','Med-L','Med','Med-H','High'];
 
-  // Gradient track (full spectrum low→high)
+  // Base track
   const track = document.createElement('div');
-  track.style.cssText = `position:absolute;top:8px;left:0;right:0;height:2px;border-radius:1px;
-    background:linear-gradient(to right,${ENERGY_COLORS['low']},${ENERGY_COLORS['medium-low']},${ENERGY_COLORS['medium']},${ENERGY_COLORS['medium-high']},${ENERGY_COLORS['high']});
-    opacity:0.35`;
+  track.style.cssText = 'position:absolute;top:8px;left:0;right:0;height:1px;background:#2a2a2a';
   container.appendChild(track);
+
+  // Colored gradient fill from left up to selected dot
+  if (current) {
+    const idx = levels.indexOf(current);
+    const fill = document.createElement('div');
+    fill.style.cssText = `position:absolute;top:7px;left:0;width:${idx/(levels.length-1)*100}%;height:3px;border-radius:2px;
+      background:linear-gradient(to right,transparent,${ENERGY_COLORS[current]})`;
+    container.appendChild(fill);
+  }
 
   levels.forEach((level, i) => {
     const pct = i / (levels.length - 1) * 100;
@@ -1260,9 +1287,12 @@ function showTagBubble() {
   if (!selectedTrackId) return;
   const bubble = document.getElementById('tag-bubble');
   bubble.style.display = 'block';
+  // Replay entrance animation
+  bubble.classList.remove('visible');
+  void bubble.offsetWidth;
+  bubble.classList.add('visible');
   setTimeout(() => {
-    const input = document.getElementById('tag-input');
-    input.focus();
+    document.getElementById('tag-input').focus();
     showTagDropdown();
   }, 50);
 }
@@ -1612,7 +1642,6 @@ function toggleMappingPicker(item, spotifyGenre, trackId, onPick) {
 // ── TRACK SELECTION ──
 function selectTrack(id) {
   stopAudio();
-  hideTagBubble();
   if (selectedTrackIds.size > 0) { selectedTrackIds.clear(); renderBulkBar(); }
   selectedTrackId = id;
   const t = tracks.find(x => x.id === id);
@@ -1640,7 +1669,7 @@ function selectTrack(id) {
   document.getElementById('audio-fill').style.width = '0%';
   document.getElementById('audio-time').textContent = '0:00';
 
-  renderCurrentTags(); renderMeta(t); renderSongList();
+  renderCurrentTags(); renderMeta(t); renderSongList(); showTagBubble();
 
   document.getElementById('suggestions-loading').style.display = 'block';
   document.getElementById('suggestions-list').innerHTML = '';
