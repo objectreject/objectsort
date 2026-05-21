@@ -341,7 +341,15 @@
             <a id="mb-btn" class="detail-link" href="#" target="_blank">musicbrainz ↗</a>
             <a id="everynoise-btn" class="detail-link" href="https://everynoise.com" target="_blank">everynoise ↗</a>
           </div>
-          <div class="audio-bar">
+          <div class="section-label" style="margin-top:0.5rem;display:flex;justify-content:space-between;align-items:center">
+            <span>Your Tags</span>
+            <button onclick="showTagBubble()" style="background:transparent;border:1px solid #2a2a2a;border-radius:4px;color:#555;font-size:0.68rem;padding:1px 6px;cursor:pointer;font-family:inherit"
+              onmouseover="this.style.borderColor='#1db954';this.style.color='#1db954'"
+              onmouseout="this.style.borderColor='#2a2a2a';this.style.color='#555'">＋ Tag</button>
+          </div>
+          <div class="current-tags" id="current-tags"></div>
+
+          <div class="audio-bar" style="margin-top:1rem">
             <button id="audio-btn" onclick="togglePlay()">▶</button>
             <div id="audio-progress" onclick="seekAudio(event)"><div id="audio-fill"></div></div>
             <span class="audio-time" id="audio-time">0:00</span>
@@ -370,20 +378,6 @@
           <div class="section-label">Energy</div>
           <div id="energy-selector" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:0.5rem"></div>
 
-          <div class="section-label">Your Tags</div>
-          <div class="current-tags" id="current-tags"></div>
-
-          <div class="section-label">Tag</div>
-          <div style="position:relative">
-            <input id="tag-input" type="text" placeholder="Search or create genre..." autocomplete="off"
-              style="width:100%;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.4rem 0.6rem;color:#eee;font-size:0.8rem;outline:none"
-              onfocus="this.style.borderColor='#1db954';showTagDropdown()"
-              onblur="this.style.borderColor='#2a2a2a';setTimeout(hideTagDropdown,150)"
-              oninput="showTagDropdown()"
-              onkeydown="handleTagInput(event)" />
-            <div id="tag-dropdown" style="display:none;position:absolute;left:0;right:0;background:#111;border:1px solid #2a2a2a;border-radius:5px;margin-top:2px;max-height:160px;overflow-y:auto;z-index:20"></div>
-          </div>
-
           <div class="section-label" style="margin-top:1.1rem">Tag Suggestions</div>
           <div id="suggestions-loading" style="font-size:0.7rem;color:#333;padding:0.15rem 0">fetching...</div>
           <div id="suggestions-list"></div>
@@ -396,6 +390,22 @@
           </a>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- FLOATING TAG BUBBLE -->
+  <div id="tag-bubble" style="display:none;position:fixed;bottom:48px;left:50%;transform:translateX(-50%);width:300px;z-index:60">
+    <div style="background:#0f0f0f;border-radius:14px;padding:0.7rem 0.8rem 0.5rem;
+      box-shadow:0 0 0 1px rgba(29,185,84,0.35),0 0 0 3px rgba(52,152,219,0.1),0 12px 40px rgba(0,0,0,0.8)">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem">
+        <input id="tag-input" type="text" placeholder="Search or create genre..." autocomplete="off"
+          style="flex:1;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:0.4rem 0.65rem;color:#eee;font-size:0.82rem;outline:none;font-family:inherit"
+          onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
+          oninput="showTagDropdown()" onkeydown="handleTagInput(event)" />
+        <button onclick="hideTagBubble()" style="background:transparent;border:none;color:#444;font-size:1rem;cursor:pointer;padding:0 2px;line-height:1"
+          onmouseover="this.style.color='#888'" onmouseout="this.style.color='#444'">✕</button>
+      </div>
+      <div id="tag-dropdown" style="display:none;background:#111;border:1px solid #222;border-radius:8px;max-height:200px;overflow-y:auto"></div>
     </div>
   </div>
 
@@ -495,7 +505,7 @@ const CONTINENTS = ['Africa','Asia','Europe','North America','Oceania','South Am
 
 const ENERGY_LEVELS = ['high','medium-high','medium','medium-low','low'];
 const ENERGY_LABELS  = { 'high':'High', 'medium-high':'Med-High', 'medium':'Medium', 'medium-low':'Med-Low', 'low':'Low' };
-const ENERGY_COLORS  = { 'high':'#e74c3c', 'medium-high':'#e67e22', 'medium':'#f1c40f', 'medium-low':'#3498db', 'low':'#666' };
+const ENERGY_COLORS  = { 'high':'#e74c3c', 'medium-high':'#e67e22', 'medium':'#2ecc71', 'medium-low':'#3498db', 'low':'#666' };
 
 let selectedTrackId = null;
 let selectedTrackIds = new Set();
@@ -895,7 +905,7 @@ function renderSongList() {
     }
     const meta = trackMeta[t.id];
     const metaParts = [];
-    const metaYear = meta?.year || (t.releaseDate ? t.releaseDate.slice(0,4) : null);
+    const metaYear = meta?.year || null;
     if (metaYear) metaParts.push(metaYear);
     if (meta?.countries?.length) metaParts.push(meta.countries.join(', '));
     let metaLine = null;
@@ -1150,18 +1160,12 @@ function renderEnergySelector(trackId) {
   const levels = ['low','medium-low','medium','medium-high','high'];
   const shortLabels = ['Low','Med-L','Med','Med-H','High'];
 
-  // Base track
+  // Gradient track (full spectrum low→high)
   const track = document.createElement('div');
-  track.style.cssText = 'position:absolute;top:8px;left:0;right:0;height:1px;background:#2a2a2a';
+  track.style.cssText = `position:absolute;top:8px;left:0;right:0;height:2px;border-radius:1px;
+    background:linear-gradient(to right,${ENERGY_COLORS['low']},${ENERGY_COLORS['medium-low']},${ENERGY_COLORS['medium']},${ENERGY_COLORS['medium-high']},${ENERGY_COLORS['high']});
+    opacity:0.35`;
   container.appendChild(track);
-
-  // Colored fill up to selected position
-  if (current) {
-    const idx = levels.indexOf(current);
-    const fill = document.createElement('div');
-    fill.style.cssText = `position:absolute;top:8px;left:0;width:${idx/(levels.length-1)*100}%;height:1px;background:${ENERGY_COLORS[current]}`;
-    container.appendChild(fill);
-  }
 
   levels.forEach((level, i) => {
     const pct = i / (levels.length - 1) * 100;
@@ -1239,7 +1243,7 @@ function showTagDropdown() {
     const name = document.createElement('span'); name.textContent = g.name; name.style.flex = '1';
     const check = document.createElement('span'); check.textContent = tagged ? '✓' : ''; check.style.color = '#1db954';
     item.append(dot, name, check);
-    item.onmousedown = () => { toggleTag(g.id); input.value = ''; hideTagDropdown(); };
+    item.onmousedown = () => { toggleTag(g.id); input.value = ''; hideTagDropdown(); showTagDropdown(); };
     dropdown.appendChild(item);
   });
   if (q && !matches.find(g => g.name.toLowerCase() === q)) {
@@ -1252,13 +1256,29 @@ function showTagDropdown() {
   dropdown.style.display = (matches.length || q) ? 'block' : 'none';
 }
 
+function showTagBubble() {
+  if (!selectedTrackId) return;
+  const bubble = document.getElementById('tag-bubble');
+  bubble.style.display = 'block';
+  setTimeout(() => {
+    const input = document.getElementById('tag-input');
+    input.focus();
+    showTagDropdown();
+  }, 50);
+}
+
+function hideTagBubble() {
+  document.getElementById('tag-bubble').style.display = 'none';
+  hideTagDropdown();
+}
+
 function hideTagDropdown() {
   const dd = document.getElementById('tag-dropdown');
   if (dd) dd.style.display = 'none';
 }
 
 function handleTagInput(e) {
-  if (e.key === 'Escape') { hideTagDropdown(); return; }
+  if (e.key === 'Escape') { hideTagBubble(); return; }
   if (e.key !== 'Enter') return;
   const input = document.getElementById('tag-input');
   const q = input.value.trim();
@@ -1266,7 +1286,7 @@ function handleTagInput(e) {
   const match = genres.find(g => g.name.toLowerCase() === q.toLowerCase());
   if (match) toggleTag(match.id);
   else createAndTagGenre(q);
-  input.value = ''; hideTagDropdown();
+  input.value = ''; hideTagDropdown(); showTagDropdown();
 }
 
 function createAndTagGenre(name) {
@@ -1592,6 +1612,7 @@ function toggleMappingPicker(item, spotifyGenre, trackId, onPick) {
 // ── TRACK SELECTION ──
 function selectTrack(id) {
   stopAudio();
+  hideTagBubble();
   if (selectedTrackIds.size > 0) { selectedTrackIds.clear(); renderBulkBar(); }
   selectedTrackId = id;
   const t = tracks.find(x => x.id === id);
