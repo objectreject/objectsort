@@ -215,21 +215,30 @@
     100% { background-position: 0%   50%; }
   }
   @keyframes bgPulse {
+    /* fast bounces — loop point acts as a wall */
     0%   { background-position: 0%   50%; }
-    3%   { background-position: 100% 20%; }
-    6%   { background-position: 0%   80%; }
-    9%   { background-position: 88%  30%; }
-    13%  { background-position: 6%   70%; }
-    18%  { background-position: 75%  25%; }
-    24%  { background-position: 15%  65%; }
-    31%  { background-position: 62%  40%; }
-    39%  { background-position: 25%  60%; }
-    48%  { background-position: 52%  45%; }
-    58%  { background-position: 35%  55%; }
-    69%  { background-position: 47%  50%; }
-    80%  { background-position: 40%  52%; }
-    90%  { background-position: 44%  48%; }
-    96%  { background-position: 18%  50%; }
+    4%   { background-position: 100% 22%; }
+    8%   { background-position: 2%   78%; }
+    12%  { background-position: 90%  28%; }
+    16%  { background-position: 6%   72%; }
+    /* slowing */
+    21%  { background-position: 76%  34%; }
+    27%  { background-position: 16%  64%; }
+    33%  { background-position: 64%  40%; }
+    40%  { background-position: 26%  58%; }
+    /* settled */
+    48%  { background-position: 54%  46%; }
+    56%  { background-position: 44%  54%; }
+    /* winding back up — mirror of the slowing phase */
+    63%  { background-position: 26%  58%; }
+    69%  { background-position: 64%  40%; }
+    75%  { background-position: 16%  64%; }
+    80%  { background-position: 76%  34%; }
+    /* fast again */
+    84%  { background-position: 6%   72%; }
+    88%  { background-position: 90%  28%; }
+    92%  { background-position: 2%   78%; }
+    96%  { background-position: 100% 22%; }
     100% { background-position: 0%   50%; }
   }
   #tag-bubble.visible {
@@ -238,7 +247,7 @@
   .bubble-ring {
     border-radius: 16px;
     padding: 1px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04), rgba(255,255,255,0.14), rgba(255,255,255,0.06), rgba(255,255,255,0.18));
+    background: linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0.08), rgba(255,255,255,0.4), rgba(255,255,255,0.12), rgba(255,255,255,0.55));
     background-size: 300% 300%;
     animation: gradientShift 6s ease infinite;
     box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
@@ -440,7 +449,7 @@
           <button onclick="hideTagBubble()" style="background:transparent;border:none;color:#333;font-size:1rem;cursor:pointer;padding:0 2px;line-height:1"
             onmouseover="this.style.color='#888'" onmouseout="this.style.color='#333'">✕</button>
         </div>
-        <div id="tag-dropdown" style="display:none;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:8px;max-height:200px;overflow-y:auto"></div>
+        <div id="tag-dropdown" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;max-height:220px;overflow-y:auto;box-shadow:0 -8px 24px rgba(0,0,0,0.7)"></div>
       </div>
     </div>
   </div>
@@ -836,7 +845,9 @@ function getGenrePath(id) {
 function renderGenreTree() {
   const list = document.getElementById('genre-list');
   list.innerHTML = '';
-  genres.filter(g => !g.parentId).forEach(g => list.appendChild(buildGenreNode(g)));
+  genres.filter(g => !g.parentId)
+    .sort((a, b) => getTrackCountForGenre(b.id) - getTrackCountForGenre(a.id))
+    .forEach(g => list.appendChild(buildGenreNode(g)));
   updateStats();
 }
 
@@ -855,6 +866,22 @@ function buildGenreNode(genre) {
   }
   const dot = document.createElement('span'); dot.className = 'g-dot'; dot.style.background = genre.color;
   const name = document.createElement('span'); name.className = 'g-name'; name.textContent = genre.name;
+  name.title = 'Double-click to rename';
+  name.ondblclick = e => {
+    e.stopPropagation();
+    const input = document.createElement('input');
+    input.value = genre.name;
+    input.style.cssText = 'flex:1;background:#1a1a1a;border:1px solid #1db954;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
+    name.replaceWith(input);
+    input.focus(); input.select();
+    const commit = () => {
+      const val = input.value.trim();
+      if (val && val !== genre.name) { genre.name = val; saveData(); renderGenreTree(); renderParentSelect(); }
+      else { input.replaceWith(name); }
+    };
+    input.onblur = commit;
+    input.onkeydown = e2 => { if (e2.key === 'Enter') { input.blur(); } else if (e2.key === 'Escape') { input.value = genre.name; input.blur(); } e2.stopPropagation(); };
+  };
   const cnt = document.createElement('span'); cnt.className = 'g-count'; cnt.textContent = getTrackCountForGenre(genre.id);
   const del = document.createElement('button'); del.className = 'g-del'; del.textContent = '✕';
   del.onclick = e => { e.stopPropagation(); if (confirm(`Delete "${genre.name}"?`)) deleteGenre(genre.id); };
@@ -962,7 +989,7 @@ function renderSongList() {
       }
     }
     const play = document.createElement('div'); play.className = 'song-play';
-    if (isFullyTagged(t.id)) { play.textContent = '●'; play.style.fontSize = '0.45rem'; play.style.color = 'rgba(29,185,84,0.45)'; }
+    if (isFullyTagged(t.id)) { play.textContent = '·'; play.style.color = 'rgba(29,185,84,0.6)'; }
     else play.textContent = '';
     info.append(title, artist);
     if (metaLine) info.appendChild(metaLine);
@@ -1054,11 +1081,18 @@ function applyBulkTag(genreId) {
     if (!tags[tid].includes(genreId)) tags[tid].push(genreId);
   });
   saveData();
-  document.getElementById('bulk-input').value = '';
-  hideBulkDropdown();
   renderSongList();
   renderCurrentTags();
   updateStats();
+  const input = document.getElementById('tag-input');
+  const g = getGenre(genreId);
+  if (g && input) {
+    input.value = '';
+    hideTagDropdown();
+    const prev = input.placeholder;
+    input.placeholder = `✓ "${g.name}" added to ${selectedTrackIds.size} track${selectedTrackIds.size !== 1 ? 's' : ''}`;
+    setTimeout(() => { input.placeholder = prev; }, 2000);
+  }
 }
 
 function applyBulkYear(year) {
@@ -1708,13 +1742,15 @@ function renderCurrentTags() {
     container.innerHTML = '<span style="font-size:0.75rem;color:#444">No tags yet</span>'; return;
   }
   container.innerHTML = '';
-  songTags.forEach(gid => {
-    const g = getGenre(gid); if (!g) return;
-    const chip = document.createElement('span'); chip.className = 'tag-chip-big';
-    chip.style.color = g.color; chip.style.borderColor = g.color + '66';
-    chip.innerHTML = `${getGenrePath(gid)} <button class="remove-tag" onclick="removeTag('${gid}')">✕</button>`;
-    container.appendChild(chip);
-  });
+  [...songTags]
+    .sort((a, b) => getTrackCountForGenre(b) - getTrackCountForGenre(a))
+    .forEach(gid => {
+      const g = getGenre(gid); if (!g) return;
+      const chip = document.createElement('span'); chip.className = 'tag-chip-big';
+      chip.style.color = g.color; chip.style.borderColor = g.color + '66';
+      chip.innerHTML = `${getGenrePath(gid)} <button class="remove-tag" onclick="removeTag('${gid}')">✕</button>`;
+      container.appendChild(chip);
+    });
 }
 
 function renderGenrePicker() {}
