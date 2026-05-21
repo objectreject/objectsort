@@ -219,17 +219,18 @@
   }
   .bubble-ring {
     border-radius: 16px;
-    padding: 1.5px;
-    background: linear-gradient(135deg, #1db954, #3498db, #9b59b6, #e74c3c, #f39c12, #1db954);
-    background-size: 400% 400%;
-    animation: gradientShift 5s ease infinite;
-    box-shadow: 0 0 30px rgba(29,185,84,0.18), 0 0 60px rgba(52,152,219,0.1), 0 20px 60px rgba(0,0,0,0.95);
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04), rgba(255,255,255,0.14), rgba(255,255,255,0.06), rgba(255,255,255,0.18));
+    background-size: 300% 300%;
+    animation: gradientShift 6s ease infinite;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
   }
   .bubble-inner {
-    background: rgba(8,8,8,0.97);
+    background: rgba(14,14,14,0.92);
     border-radius: 15px;
     padding: 0.75rem 0.85rem 0.6rem;
-    backdrop-filter: blur(24px);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
   }
 </style>
 </head>
@@ -324,13 +325,6 @@
       <div class="song-toolbar">
         <input type="text" id="search-input" placeholder="Search songs..." oninput="filterSongs()" />
         <button class="btn-outline btn-sm" id="uncat-toggle" onclick="toggleUncategorized()">Untagged</button>
-        <button class="btn-outline btn-sm" onclick="startReview()" style="font-size:0.72rem;border-color:#1db954;color:#1db954">Review</button>
-      </div>
-      <div id="review-bar">
-        <span class="r-label">Review Mode</span>
-        <span class="r-prog" id="review-prog"></span>
-        <button class="btn-outline btn-sm" onclick="nextReview()" style="font-size:0.7rem">Next →</button>
-        <button class="btn-outline btn-sm" onclick="endReview()" style="font-size:0.7rem">Done</button>
       </div>
       <div id="bulk-bar" style="flex-wrap:wrap;row-gap:0.4rem">
         <span class="bulk-label" id="bulk-label">0 selected</span>
@@ -381,13 +375,17 @@
             <div class="meta-field" style="flex:2">
               <div class="meta-label">Country</div>
               <div style="position:relative">
-                <input id="country-input" class="meta-input" type="text" placeholder="Search..." autocomplete="off"
-                  onfocus="this.style.borderColor='#1db954';showCountryDropdown()"
-                  onblur="this.style.borderColor='#2a2a2a';setTimeout(hideCountryDropdown,150)"
-                  oninput="showCountryDropdown()" onkeydown="handleCountryInput(event)" />
+                <div id="country-tags" style="display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-height:28px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:5px;padding:3px 6px;cursor:text"
+                  onclick="document.getElementById('country-input').focus()">
+                  <input id="country-input" type="text" placeholder="Add..." autocomplete="off"
+                    style="border:none;outline:none;background:transparent;color:#eee;font-size:0.78rem;font-family:inherit;width:50px;min-width:40px;flex:1"
+                    onfocus="document.getElementById('country-tags').style.borderColor='#1db954';showCountryDropdown()"
+                    onblur="document.getElementById('country-tags').style.borderColor='#2a2a2a';setTimeout(hideCountryDropdown,150)"
+                    oninput="this.style.width=Math.max(40,this.value.length*8+16)+'px';showCountryDropdown()"
+                    onkeydown="handleCountryInput(event)" />
+                </div>
                 <div id="country-dropdown" style="display:none;position:absolute;left:0;right:0;background:#111;border:1px solid #2a2a2a;border-radius:5px;margin-top:2px;max-height:140px;overflow-y:auto;z-index:30"></div>
               </div>
-              <div id="country-tags" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:0.4rem"></div>
             </div>
             <datalist id="country-datalist"></datalist>
           </div>
@@ -962,6 +960,8 @@ function toggleBulkSelect(trackId) {
   else selectedTrackIds.add(trackId);
   renderBulkBar();
   renderSongList();
+  if (selectedTrackIds.size > 0) showTagBubble();
+  else hideTagBubble();
 }
 
 function clearBulkSelection() {
@@ -975,10 +975,8 @@ function renderBulkBar() {
   const n = selectedTrackIds.size;
   bar.style.display = n > 0 ? 'flex' : 'none';
   document.getElementById('bulk-label').textContent = `${n} selected`;
-  document.getElementById('bulk-input').value = '';
   document.getElementById('bulk-year').value = '';
   document.getElementById('bulk-country').value = '';
-  hideBulkDropdown();
 }
 
 function showBulkDropdown() {
@@ -1270,7 +1268,7 @@ function showTagDropdown() {
     const name = document.createElement('span'); name.textContent = g.name; name.style.flex = '1';
     const check = document.createElement('span'); check.textContent = tagged ? '✓' : ''; check.style.color = '#1db954';
     item.append(dot, name, check);
-    item.onmousedown = () => { toggleTag(g.id); input.value = ''; hideTagDropdown(); showTagDropdown(); };
+    item.onmousedown = () => { if (selectedTrackIds.size > 0) applyBulkTag(g.id); else toggleTag(g.id); input.value = ''; hideTagDropdown(); showTagDropdown(); };
     dropdown.appendChild(item);
   });
   if (q && !matches.find(g => g.name.toLowerCase() === q)) {
@@ -1284,13 +1282,15 @@ function showTagDropdown() {
 }
 
 function showTagBubble() {
-  if (!selectedTrackId) return;
+  if (!selectedTrackId && selectedTrackIds.size === 0) return;
   const bubble = document.getElementById('tag-bubble');
+  const alreadyOpen = bubble.style.display === 'block';
   bubble.style.display = 'block';
-  // Replay entrance animation
-  bubble.classList.remove('visible');
-  void bubble.offsetWidth;
-  bubble.classList.add('visible');
+  if (!alreadyOpen) {
+    bubble.classList.remove('visible');
+    void bubble.offsetWidth;
+    bubble.classList.add('visible');
+  }
   setTimeout(() => {
     document.getElementById('tag-input').focus();
     showTagDropdown();
@@ -1312,10 +1312,19 @@ function handleTagInput(e) {
   if (e.key !== 'Enter') return;
   const input = document.getElementById('tag-input');
   const q = input.value.trim();
-  if (!q || !selectedTrackId) return;
+  if (!q || (!selectedTrackId && selectedTrackIds.size === 0)) return;
   const match = genres.find(g => g.name.toLowerCase() === q.toLowerCase());
-  if (match) toggleTag(match.id);
-  else createAndTagGenre(q);
+  if (selectedTrackIds.size > 0) {
+    if (match) applyBulkTag(match.id);
+    else {
+      const g = { id: Date.now().toString(), name: q, color: nextColor(), parentId: null };
+      genres.push(g); renderGenreTree(); renderParentSelect();
+      applyBulkTag(g.id);
+    }
+  } else {
+    if (match) toggleTag(match.id);
+    else createAndTagGenre(q);
+  }
   input.value = ''; hideTagDropdown(); showTagDropdown();
 }
 
@@ -1416,18 +1425,21 @@ function removeCountry(trackId, country) {
 
 function renderCountryTagChips(trackId) {
   const container = document.getElementById('country-tags');
+  const input = document.getElementById('country-input');
+  // Remove only chip elements, leave the input
+  Array.from(container.children).forEach(el => { if (el !== input) el.remove(); });
   const countries = trackMeta[trackId]?.countries || [];
-  container.innerHTML = '';
   countries.forEach(c => {
     const chip = document.createElement('span');
-    chip.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;padding:2px 6px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;color:#aaa';
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;padding:2px 6px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#aaa;flex-shrink:0';
     const label = document.createElement('span'); label.textContent = c;
     const del = document.createElement('span');
     del.textContent = '×'; del.style.cssText = 'cursor:pointer;color:#555;line-height:1';
     del.onmouseover = () => del.style.color = '#c0392b';
     del.onmouseout = () => del.style.color = '#555';
     del.onclick = () => removeCountry(trackId, c);
-    chip.append(label, del); container.appendChild(chip);
+    chip.append(label, del);
+    container.insertBefore(chip, input);
   });
 }
 
@@ -1516,12 +1528,7 @@ function buildSuggestionItem(genre, trackId) {
   const nameEl = document.createElement('div'); nameEl.className = 'sugg-genre-name'; nameEl.textContent = genre;
   left.appendChild(nameEl);
 
-  if (customGenre) {
-    const mappedTo = document.createElement('div'); mappedTo.className = 'sugg-mapped-to';
-    const dot = document.createElement('span'); dot.className = 'mapped-dot'; dot.style.background = customGenre.color;
-    const label = document.createElement('span'); label.textContent = getGenrePath(mapped);
-    mappedTo.append(dot, label); left.appendChild(mappedTo);
-  } else if (mapped === 'skip') {
+  if (mapped === 'skip') {
     const s = document.createElement('div');
     s.style.cssText = 'font-size:0.68rem;color:#333;margin-top:2px';
     s.textContent = 'skipped'; left.appendChild(s);
@@ -1931,6 +1938,27 @@ function updateLibraryBar() {
     document.getElementById('lib-fill').classList.remove('loading');
   }
 }
+
+// ── KEYBOARD NAV ──
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  e.preventDefault();
+  const visible = getVisibleTracks();
+  if (!visible.length) return;
+  const idx = visible.findIndex(t => t.id === selectedTrackId);
+  const next = e.key === 'ArrowDown'
+    ? visible[Math.min(idx + 1, visible.length - 1)]
+    : visible[Math.max(idx - 1, 0)];
+  if (next && next.id !== selectedTrackId) {
+    selectTrack(next.id);
+    // Scroll the row into view
+    const rows = document.querySelectorAll('.song-row');
+    const visibleIdx = visible.indexOf(next);
+    if (rows[visibleIdx]) rows[visibleIdx].scrollIntoView({ block: 'nearest' });
+  }
+});
 
 // ── INIT ──
 function initResizeHandles() {
