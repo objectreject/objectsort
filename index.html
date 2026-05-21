@@ -554,7 +554,7 @@ const ENERGY_COLORS  = { 'high':'#e74c3c', 'medium-high':'#e67e22', 'medium':'#2
 
 let selectedTrackId = null;
 let selectedTrackIds = new Set();
-let selectedGenreFilter = null;
+let selectedGenreFilter = new Set();
 let selectedYearFilter = null;
 let selectedCountryFilter = null;
 let selectedRegionFilter = null;
@@ -855,8 +855,14 @@ function buildGenreNode(genre) {
   const children = genres.filter(g => g.parentId === genre.id);
   const wrap = document.createElement('div'); wrap.className = 'g-item';
   const row = document.createElement('div');
-  row.className = 'g-row' + (selectedGenreFilter === genre.id ? ' selected' : '');
-  row.onclick = e => { if (e.target.classList.contains('g-del')) return; filterByGenre(genre.id); };
+  row.className = 'g-row' + (selectedGenreFilter.has(genre.id) ? ' selected' : '');
+  let clickTimer = null;
+  row.onclick = e => {
+    if (e.target.classList.contains('g-del') || e.target.tagName === 'INPUT') return;
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => filterByGenre(genre.id), 220);
+  };
+  row.ondblclick = e => { clearTimeout(clickTimer); };
   const caret = document.createElement('span'); caret.className = 'g-caret';
   caret.textContent = children.length ? '▶' : '';
   const childWrap = document.createElement('div'); childWrap.className = 'g-children';
@@ -911,7 +917,7 @@ function getVisibleTracks() {
   const q = document.getElementById('search-input').value.toLowerCase();
   return tracks.filter(t => {
     if (showUncategorizedOnly && isFullyTagged(t.id)) return false;
-    if (selectedGenreFilter && !(tags[t.id]||[]).includes(selectedGenreFilter)) return false;
+    if (selectedGenreFilter.size > 0 && !([...selectedGenreFilter].every(gid => (tags[t.id]||[]).includes(gid)))) return false;
     if (selectedYearFilter) {
       const [startStr, endStr] = selectedYearFilter.split('-');
       const start = parseInt(startStr), end = parseInt(endStr);
@@ -1304,12 +1310,13 @@ function renderEnergyFilter() {
 
 // ── TAG INPUT ──
 function showTagDropdown() {
-  if (!selectedTrackId) return;
+  if (!selectedTrackId && selectedTrackIds.size === 0) return;
   const input = document.getElementById('tag-input');
   const dropdown = document.getElementById('tag-dropdown');
   const q = input.value.toLowerCase().trim();
-  const songTags = tags[selectedTrackId] || [];
-  const matches = genres.filter(g => !q || g.name.toLowerCase().includes(q)).slice(0, 10);
+  if (!q) { hideTagDropdown(); return; }
+  const songTags = selectedTrackId ? (tags[selectedTrackId] || []) : [];
+  const matches = genres.filter(g => g.name.toLowerCase().includes(q)).slice(0, 10);
   dropdown.innerHTML = '';
   matches.forEach(g => {
     const tagged = songTags.includes(g.id);
@@ -1322,17 +1329,17 @@ function showTagDropdown() {
     const name = document.createElement('span'); name.textContent = g.name; name.style.flex = '1';
     const check = document.createElement('span'); check.textContent = tagged ? '✓' : ''; check.style.color = '#1db954';
     item.append(dot, name, check);
-    item.onmousedown = () => { if (selectedTrackIds.size > 0) applyBulkTag(g.id); else toggleTag(g.id); input.value = ''; hideTagDropdown(); showTagDropdown(); };
+    item.onmousedown = () => { if (selectedTrackIds.size > 0) applyBulkTag(g.id); else toggleTag(g.id); input.value = ''; hideTagDropdown(); };
     dropdown.appendChild(item);
   });
-  if (q && !matches.find(g => g.name.toLowerCase() === q)) {
+  if (!matches.find(g => g.name.toLowerCase() === q)) {
     const create = document.createElement('div');
     create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#1db954;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
     create.textContent = `+ Create "${input.value.trim()}"`;
     create.onmousedown = () => { createAndTagGenre(input.value.trim()); input.value = ''; hideTagDropdown(); };
     dropdown.appendChild(create);
   }
-  dropdown.style.display = (matches.length || q) ? 'block' : 'none';
+  dropdown.style.display = 'block';
 }
 
 function showTagBubble() {
@@ -1345,7 +1352,6 @@ function showTagBubble() {
   bubble.classList.add('visible');
   setTimeout(() => {
     document.getElementById('tag-input').focus();
-    showTagDropdown();
   }, 50);
 }
 
@@ -1389,20 +1395,21 @@ function createAndTagGenre(name) {
 
 function toggleUncategorized() {
   showUncategorizedOnly = !showUncategorizedOnly;
-  selectedGenreFilter = null;
+  selectedGenreFilter = new Set();
   document.getElementById('uncat-toggle').classList.toggle('active', showUncategorizedOnly);
   updateResetBtn(); renderSongList(); renderGenreTree();
 }
 
 function filterByGenre(gid) {
-  selectedGenreFilter = selectedGenreFilter === gid ? null : gid;
+  if (selectedGenreFilter.has(gid)) selectedGenreFilter.delete(gid);
+  else selectedGenreFilter.add(gid);
   showUncategorizedOnly = false;
   document.getElementById('uncat-toggle').classList.remove('active');
   updateResetBtn(); renderSongList(); renderGenreTree();
 }
 
 function showAllSongs() {
-  selectedGenreFilter = null; showUncategorizedOnly = false;
+  selectedGenreFilter = new Set(); showUncategorizedOnly = false;
   selectedYearFilter = null; selectedCountryFilter = null; selectedRegionFilter = null; selectedEnergyFilter = null;
   document.getElementById('uncat-toggle').classList.remove('active');
   document.getElementById('reset-filter-btn').style.display = 'none';
@@ -1415,7 +1422,7 @@ function showAllSongs() {
 }
 
 function updateResetBtn() {
-  const visible = selectedGenreFilter || showUncategorizedOnly || selectedYearFilter || selectedCountryFilter || selectedRegionFilter || selectedEnergyFilter;
+  const visible = selectedGenreFilter.size > 0 || showUncategorizedOnly || selectedYearFilter || selectedCountryFilter || selectedRegionFilter || selectedEnergyFilter;
   document.getElementById('reset-filter-btn').style.display = visible ? 'block' : 'none';
 }
 
