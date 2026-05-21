@@ -77,6 +77,9 @@
   .filter-section { border-top: 1px solid #2a2a2a; flex-shrink: 0; }
   .filter-head { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: #555; user-select: none; }
   .filter-head:hover { color: #888; }
+  .drag-handle { color: #333; cursor: grab; font-size: 0.9rem; line-height: 1; }
+  .filter-section:hover .drag-handle { color: #555; }
+  .filter-section.drag-over { border-top: 2px solid #1db954; }
   .filter-chips { display: flex; flex-direction: column; gap: 1px; padding: 0.2rem 0 0.4rem; max-height: 120px; overflow-y: auto; }
   .filter-chips::-webkit-scrollbar { width: 3px; }
   .filter-chips::-webkit-scrollbar-thumb { background: #2a2a2a; }
@@ -322,9 +325,10 @@
           oninput="renderGenreTree()" />
       </div>
       <div class="genre-list" id="genre-list"></div>
-      <div class="filter-section">
+      <div id="filter-sections">
+      <div class="filter-section" data-section="year" draggable="true">
         <div class="filter-head" onclick="toggleFilterSection('year')">
-          <span>Year</span>
+          <span style="display:flex;align-items:center;gap:0.4rem"><span class="drag-handle">⠿</span>Year</span>
           <span style="display:flex;align-items:center;gap:0.4rem">
             <span id="year-bucket-btn" onclick="event.stopPropagation();cycleYearBucket()"
               style="font-size:0.65rem;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:1px 5px;color:#666;cursor:pointer"
@@ -335,23 +339,24 @@
         </div>
         <div class="filter-chips" id="year-filter-list" style="display:none"></div>
       </div>
-      <div class="filter-section">
+      <div class="filter-section" data-section="country" draggable="true">
         <div class="filter-head" onclick="toggleFilterSection('country')">
-          <span>Country</span><span id="country-filter-caret">▸</span>
+          <span style="display:flex;align-items:center;gap:0.4rem"><span class="drag-handle">⠿</span>Country</span><span id="country-filter-caret">▸</span>
         </div>
         <div class="filter-chips" id="country-filter-list" style="display:none"></div>
       </div>
-      <div class="filter-section">
+      <div class="filter-section" data-section="region" draggable="true">
         <div class="filter-head" onclick="toggleFilterSection('region')">
-          <span>Region</span><span id="region-filter-caret">▸</span>
+          <span style="display:flex;align-items:center;gap:0.4rem"><span class="drag-handle">⠿</span>Region</span><span id="region-filter-caret">▸</span>
         </div>
         <div class="filter-chips" id="region-filter-list" style="display:none"></div>
       </div>
-      <div class="filter-section">
+      <div class="filter-section" data-section="energy" draggable="true">
         <div class="filter-head" onclick="toggleFilterSection('energy')">
-          <span>Energy</span><span id="energy-filter-caret">▸</span>
+          <span style="display:flex;align-items:center;gap:0.4rem"><span class="drag-handle">⠿</span>Energy</span><span id="energy-filter-caret">▸</span>
         </div>
         <div class="filter-chips" id="energy-filter-list" style="display:none"></div>
+      </div>
       </div>
       <div style="display:none"><select id="new-genre-parent"><option value="">Top level</option></select></div>
     </div>
@@ -360,7 +365,12 @@
     <!-- SONG LIST -->
     <div class="song-panel">
       <div class="song-toolbar">
-        <input type="text" id="search-input" placeholder="Search songs..." oninput="filterSongs()" />
+        <div style="position:relative;flex:1">
+          <input type="text" id="search-input" placeholder="Search songs..." oninput="filterSongs();document.getElementById('search-clear').style.display=this.value?'block':'none'" style="width:100%;box-sizing:border-box;padding-right:1.6rem" />
+          <button id="search-clear" onclick="document.getElementById('search-input').value='';document.getElementById('search-clear').style.display='none';filterSongs()"
+            style="display:none;position:absolute;right:0.4rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#555;cursor:pointer;font-size:0.85rem;line-height:1;padding:0">✕</button>
+        </div>
+        <button class="btn-outline btn-sm" onclick="jumpToSelected()" title="Jump to selected track" style="white-space:nowrap;flex-shrink:0">⌖</button>
         <div style="position:relative">
           <button class="btn-outline btn-sm" id="incomplete-toggle" onclick="toggleIncompleteDropdown()" style="white-space:nowrap">Incomplete ▾</button>
           <div id="incomplete-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem;z-index:40;display:none;flex-direction:column;gap:0.3rem;min-width:130px;box-shadow:0 4px 16px rgba(0,0,0,0.6)">
@@ -395,9 +405,7 @@
         <div id="song-detail" style="display:none">
           <img id="detail-art" class="detail-art" src="" alt="" />
           <div class="detail-title" id="detail-title"></div>
-          <div id="detail-artist" title="Click to copy" onclick="copyArtist(this)" class="detail-artist"
-             style="cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-             onmouseover="this.style.color='#bbb'" onmouseout="this.style.color='#888'"></div>
+          <div id="detail-artist" class="detail-artist" style="display:flex;flex-wrap:wrap;gap:0.25rem;align-items:center"></div>
           <div class="detail-links">
             <a id="discogs-btn" class="detail-link" href="#" target="_blank">discogs ↗</a>
             <a id="mb-btn" class="detail-link" href="#" target="_blank">musicbrainz ↗</a>
@@ -1120,6 +1128,16 @@ function renderSongList() {
 
 function filterSongs() { renderSongList(); }
 
+function jumpToSelected() {
+  if (!selectedTrackId) return;
+  const idx = _visibleCache.findIndex(t => t.id === selectedTrackId);
+  if (idx === -1) return;
+  const list = document.getElementById('song-list');
+  const rowTop = idx * ROW_H;
+  list.scrollTop = rowTop - list.clientHeight / 2 + ROW_H / 2;
+  _vsRenderWindow();
+}
+
 // ── BULK SELECTION ──
 function toggleBulkSelect(trackId) {
   if (selectedTrackIds.has(trackId)) selectedTrackIds.delete(trackId);
@@ -1266,7 +1284,7 @@ function cycleYearBucket() {
 
 function renderYearFilter() {
   const list = document.getElementById('year-filter-list');
-  const years = tracks.map(t => {
+  const years = getVisibleTracks().map(t => {
     const y = trackMeta[t.id]?.year || (t.releaseDate ? t.releaseDate.slice(0,4) : null);
     return y ? parseInt(y) : null;
   }).filter(Boolean);
@@ -1301,7 +1319,7 @@ function renderYearFilter() {
 function renderCountryFilter() {
   const list = document.getElementById('country-filter-list');
   const countMap = {};
-  Object.values(trackMeta).forEach(m => (m.countries || []).forEach(c => { countMap[c] = (countMap[c] || 0) + 1; }));
+  getVisibleTracks().forEach(t => (trackMeta[t.id]?.countries || []).forEach(c => { countMap[c] = (countMap[c] || 0) + 1; }));
   const countries = Object.keys(countMap).sort((a, b) => countMap[b] - countMap[a]);
   list.innerHTML = '';
   countries.forEach(c => {
@@ -1322,8 +1340,8 @@ function renderCountryFilter() {
 function renderRegionFilter() {
   const list = document.getElementById('region-filter-list');
   const continentCounts = new Map();
-  Object.values(trackMeta).forEach(m => {
-    (m.countries || []).forEach(c => {
+  getVisibleTracks().forEach(t => {
+    (trackMeta[t.id]?.countries || []).forEach(c => {
       const continent = CONTINENT_MAP[c];
       if (continent) continentCounts.set(continent, (continentCounts.get(continent) || 0) + 1);
     });
@@ -1405,8 +1423,9 @@ function renderEnergyFilter() {
   const list = document.getElementById('energy-filter-list');
   list.innerHTML = '';
   let hasAny = false;
+  const visibleIds = new Set(getVisibleTracks().map(t => t.id));
   ENERGY_LEVELS.forEach(level => {
-    const count = Object.values(trackMeta).filter(m => m.energy === level).length;
+    const count = Object.entries(trackMeta).filter(([id, m]) => visibleIds.has(id) && m.energy === level).length;
     if (!count) return;
     hasAny = true;
     const chip = document.createElement('span');
@@ -1682,15 +1701,36 @@ function hideCountryDropdown() {
 function handleCountryInput(e) {
   if (e.key !== 'Enter') return;
   const q = document.getElementById('country-input').value.trim();
-  const match = COUNTRIES.find(c => c.toLowerCase() === q.toLowerCase());
-  if (match && selectedTrackId) addCountry(selectedTrackId, match);
+  if (!q || !selectedTrackId) return;
+  // Exact match first, then first visible dropdown item
+  const exact = COUNTRIES.find(c => c.toLowerCase() === q.toLowerCase());
+  if (exact) { addCountry(selectedTrackId, exact); return; }
+  const first = document.querySelector('#country-dropdown div');
+  if (first) addCountry(selectedTrackId, first.textContent);
 }
 
 // ── SUGGESTIONS ──
+async function fetchMusicBrainzGenres(artistName) {
+  const cacheKey = 'mb:' + artistName;
+  if (artistGenreCache[cacheKey] !== undefined) return artistGenreCache[cacheKey];
+  try {
+    const query = encodeURIComponent(`artist:"${artistName}"`);
+    const res = await fetch(`https://musicbrainz.org/ws/2/artist/?query=${query}&fmt=json&limit=5`, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'objectsort/1.0 (music tagging tool)' }
+    });
+    const data = await res.json();
+    const best = data.artists?.[0];
+    const tags = (best?.tags || []).filter(t => t.count > 0).sort((a,b) => b.count - a.count).slice(0, 12).map(t => t.name);
+    artistGenreCache[cacheKey] = tags;
+    return tags;
+  } catch(e) { artistGenreCache[cacheKey] = []; return []; }
+}
+
 async function fetchArtistGenres(track) {
   const ids = track.artistIds?.length ? track.artistIds : (track.artistId ? [track.artistId] : []);
   const allGenres = new Set();
 
+  // Spotify artist genres
   for (const id of ids) {
     if (artistGenreCache[id] === undefined) {
       try {
@@ -1701,19 +1741,10 @@ async function fetchArtistGenres(track) {
     artistGenreCache[id].forEach(g => allGenres.add(g));
   }
 
-  // Fall back to Every Noise proxy when Spotify has nothing
-  if (allGenres.size === 0) {
-    const primaryArtist = track.artist.split(',')[0].trim();
-    const cacheKey = 'en:' + primaryArtist;
-    if (artistGenreCache[cacheKey] === undefined) {
-      try {
-        const res = await fetch('http://localhost:8080/genres?artist=' + encodeURIComponent(primaryArtist));
-        const data = await res.json();
-        artistGenreCache[cacheKey] = data.genres || [];
-      } catch(e) { artistGenreCache[cacheKey] = []; }
-    }
-    artistGenreCache[cacheKey].forEach(g => allGenres.add(g));
-  }
+  // MusicBrainz tags — always fetch, merged with Spotify
+  const primaryArtist = track.artist.split(',')[0].trim();
+  const mbGenres = await fetchMusicBrainzGenres(primaryArtist);
+  mbGenres.forEach(g => allGenres.add(g));
 
   return [...allGenres];
 }
@@ -1723,7 +1754,7 @@ function renderSuggestions(spotifyGenres, trackId) {
   const list = document.getElementById('suggestions-list');
   list.innerHTML = '';
   if (!spotifyGenres || spotifyGenres.length === 0) {
-    list.innerHTML = '<div style="font-size:0.75rem;color:#3a3a3a;padding:0.2rem 0">No genre data from Spotify</div>';
+    list.innerHTML = '<div style="font-size:0.75rem;color:#3a3a3a;padding:0.2rem 0">No suggestions found</div>';
     return;
   }
   spotifyGenres.slice(0, 6).forEach(genre => list.appendChild(buildSuggestionItem(genre, trackId)));
@@ -1869,10 +1900,29 @@ function selectTrack(id) {
   document.getElementById('song-detail').style.display = 'block';
   document.getElementById('detail-art').src = t.art;
   document.getElementById('detail-title').textContent = t.title;
-  document.getElementById('detail-artist').textContent = t.artist;
+  const artistEl = document.getElementById('detail-artist');
+  artistEl.innerHTML = '';
+  t.artist.split(',').map(a => a.trim()).forEach((name, i, arr) => {
+    const span = document.createElement('span');
+    span.textContent = name;
+    span.title = 'Click to copy';
+    span.style.cssText = 'cursor:pointer;color:#888;white-space:nowrap';
+    span.onmouseover = () => span.style.color = '#bbb';
+    span.onmouseout = () => span.style.color = '#888';
+    span.onclick = () => navigator.clipboard.writeText(name).then(() => {
+      const orig = span.textContent; span.textContent = 'Copied!'; span.style.color = '#1db954';
+      setTimeout(() => { span.textContent = orig; span.style.color = '#888'; }, 1200);
+    });
+    artistEl.appendChild(span);
+    if (i < arr.length - 1) {
+      const sep = document.createElement('span');
+      sep.textContent = ','; sep.style.color = '#555';
+      artistEl.appendChild(sep);
+    }
+  });
   const primaryArtist = t.artist.split(',')[0].trim();
   document.getElementById('discogs-btn').href =
-    'https://www.discogs.com/search/?q=' + encodeURIComponent(t.artist) + '&type=artist';
+    'https://www.discogs.com/search/?q=' + encodeURIComponent(t.artist + ' ' + t.title);
   document.getElementById('mb-btn').href =
     'https://musicbrainz.org/search?query=' + encodeURIComponent(primaryArtist) + '&type=artist';
   document.getElementById('spotify-play-btn').href = 'spotify:track:' + t.id;
@@ -2045,10 +2095,11 @@ async function exportAllPlaylists() {
   setStatus(`✓ Exported ${tagged.length} playlists`);
 }
 
+let _isExporting = false;
 async function exportFilteredPlaylist() {
+  if (_isExporting) return;
   const visible = getVisibleTracks();
   if (!visible.length) { setStatus('No tracks match current filters'); return; }
-  // Build a descriptive playlist name from active filters
   const parts = [];
   if (selectedGenreFilter.size > 0)
     [...selectedGenreFilter].forEach(gid => { const g = getGenre(gid); if (g) parts.push(g.name); });
@@ -2061,10 +2112,13 @@ async function exportFilteredPlaylist() {
   if (q) parts.push(`"${q}"`);
   const name = `objectsort: ${parts.join(' + ') || 'filtered'} (${visible.length})`;
   const btn = document.getElementById('export-filter-top-btn');
+  _isExporting = true;
   btn.disabled = true; btn.textContent = 'Exporting...';
   try {
     const me = await api('/me');
+    if (!me) throw new Error('Could not fetch Spotify profile — try logging out and back in');
     const pl = await api(`/users/${me.id}/playlists`, 'POST', { name, description: 'Exported from objectsort', public: false });
+    if (!pl || !pl.id) throw new Error('Playlist creation failed — Spotify returned no playlist ID');
     const uris = visible.map(t => `spotify:track:${t.id}`);
     for (let i = 0; i < uris.length; i += 100)
       await api(`/playlists/${pl.id}/tracks`, 'POST', { uris: uris.slice(i, i + 100) });
@@ -2072,7 +2126,8 @@ async function exportFilteredPlaylist() {
   } catch(e) {
     setStatus('Export failed: ' + e.message);
   }
-  btn.disabled = false; btn.textContent = '→ Spotify';
+  _isExporting = false;
+  btn.disabled = false; btn.textContent = 'Export Current Filter';
 }
 
 function downloadBackup() {
@@ -2212,6 +2267,50 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ── FILTER SECTION DRAG AND DROP ──
+function initFilterDragDrop() {
+  const container = document.getElementById('filter-sections');
+  let dragSrc = null;
+
+  // Restore saved order
+  const saved = localStorage.getItem('objectsort_filter_order');
+  if (saved) {
+    try {
+      JSON.parse(saved).forEach(name => {
+        const el = container.querySelector(`[data-section="${name}"]`);
+        if (el) container.appendChild(el);
+      });
+    } catch(e) {}
+  }
+
+  container.querySelectorAll('.filter-section').forEach(sec => {
+    sec.addEventListener('dragstart', e => {
+      dragSrc = sec;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => sec.style.opacity = '0.4', 0);
+    });
+    sec.addEventListener('dragend', () => {
+      sec.style.opacity = '';
+      container.querySelectorAll('.filter-section').forEach(s => s.classList.remove('drag-over'));
+      const order = [...container.querySelectorAll('.filter-section')].map(s => s.dataset.section);
+      localStorage.setItem('objectsort_filter_order', JSON.stringify(order));
+    });
+    sec.addEventListener('dragover', e => {
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+      container.querySelectorAll('.filter-section').forEach(s => s.classList.remove('drag-over'));
+      if (sec !== dragSrc) sec.classList.add('drag-over');
+    });
+    sec.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragSrc && dragSrc !== sec) {
+        const els = [...container.querySelectorAll('.filter-section')];
+        const fromIdx = els.indexOf(dragSrc), toIdx = els.indexOf(sec);
+        if (fromIdx < toIdx) sec.after(dragSrc); else sec.before(dragSrc);
+      }
+    });
+  });
+}
+
 // ── INIT ──
 function initResizeHandles() {
   const sidebar = document.querySelector('.sidebar');
@@ -2254,6 +2353,7 @@ async function init() {
     document.getElementById('setup').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     initResizeHandles();
+    initFilterDragDrop();
     renderGenreTree(); renderParentSelect(); await loadTracks();
   }
 }
