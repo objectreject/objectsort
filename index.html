@@ -214,6 +214,24 @@
     50%  { background-position: 100% 50%; }
     100% { background-position: 0%   50%; }
   }
+  @keyframes bgPulse {
+    0%   { background-position: 0%   50%; }
+    3%   { background-position: 100% 20%; }
+    6%   { background-position: 0%   80%; }
+    9%   { background-position: 88%  30%; }
+    13%  { background-position: 6%   70%; }
+    18%  { background-position: 75%  25%; }
+    24%  { background-position: 15%  65%; }
+    31%  { background-position: 62%  40%; }
+    39%  { background-position: 25%  60%; }
+    48%  { background-position: 52%  45%; }
+    58%  { background-position: 35%  55%; }
+    69%  { background-position: 47%  50%; }
+    80%  { background-position: 40%  52%; }
+    90%  { background-position: 44%  48%; }
+    96%  { background-position: 18%  50%; }
+    100% { background-position: 0%   50%; }
+  }
   #tag-bubble.visible {
     animation: bubbleIn 0.28s cubic-bezier(0.34, 1.5, 0.64, 1) forwards;
   }
@@ -226,7 +244,9 @@
     box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
   }
   .bubble-inner {
-    background: rgba(14,14,14,0.92);
+    background: linear-gradient(135deg, #060606, #151515, #0a0d12, #0f0f0a, #12090e, #060606);
+    background-size: 400% 400%;
+    animation: bgPulse 13s linear infinite;
     border-radius: 15px;
     padding: 0.75rem 0.85rem 0.6rem;
     backdrop-filter: blur(30px);
@@ -1284,13 +1304,11 @@ function showTagDropdown() {
 function showTagBubble() {
   if (!selectedTrackId && selectedTrackIds.size === 0) return;
   const bubble = document.getElementById('tag-bubble');
-  const alreadyOpen = bubble.style.display === 'block';
+  if (bubble.style.display === 'block') return;
   bubble.style.display = 'block';
-  if (!alreadyOpen) {
-    bubble.classList.remove('visible');
-    void bubble.offsetWidth;
-    bubble.classList.add('visible');
-  }
+  bubble.classList.remove('visible');
+  void bubble.offsetWidth;
+  bubble.classList.add('visible');
   setTimeout(() => {
     document.getElementById('tag-input').focus();
     showTagDropdown();
