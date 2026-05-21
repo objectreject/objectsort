@@ -96,7 +96,10 @@
   .song-toolbar { padding: 0.6rem 0.75rem; border-bottom: 1px solid #2a2a2a; display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
   .song-toolbar input { flex: 1; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 5px; padding: 0.4rem 0.7rem; color: #eee; font-size: 0.83rem; outline: none; }
   .song-toolbar input:focus { border-color: #1db954; }
-  #uncat-toggle.active { background: #1db954; color: #000; border-color: #1db954; }
+  #incomplete-toggle.active { background: #1db954; color: #000; border-color: #1db954; }
+  .incomplete-pill { display:block; width:100%; text-align:left; background:none; border:1px solid #2a2a2a; border-radius:5px; padding:0.25rem 0.5rem; color:#888; font-size:0.75rem; cursor:pointer; font-family:inherit; transition:all 0.1s; }
+  .incomplete-pill:hover { border-color:#444; color:#ccc; }
+  .incomplete-pill.active { background:#1db954; color:#000; border-color:#1db954; }
   #review-bar { background: #0d1f10; border-bottom: 1px solid #1a3a1a; padding: 0.4rem 0.75rem; display: none; align-items: center; gap: 0.6rem; flex-shrink: 0; }
   #review-bar .r-label { font-size: 0.75rem; color: #1db954; font-weight: 600; flex: 1; }
   #review-bar .r-prog { font-size: 0.7rem; color: #555; font-variant-numeric: tabular-nums; }
@@ -293,7 +296,8 @@
     <div class="stat-pill">Tagged: <span id="stat-tagged">0</span></div>
     <div class="stat-pill">Untagged: <span id="stat-untagged">0</span></div>
     <div class="spacer"></div>
-    <button class="btn-outline btn-sm" onclick="showExportModal()" style="font-size:0.72rem">Export</button>
+    <button class="btn-outline btn-sm" onclick="showBackupModal()" style="font-size:0.72rem">Backup</button>
+    <button id="export-filter-top-btn" class="btn-outline btn-sm" onclick="exportFilteredPlaylist()" style="font-size:0.72rem;display:none">Export Current Filter</button>
     <button class="btn-outline btn-sm" onclick="logout()" style="font-size:0.72rem">Logout</button>
   </div>
 
@@ -309,8 +313,13 @@
     <div class="sidebar">
       <div class="sidebar-head">
         <span>Genres</span>
-        <button id="export-filter-btn" class="btn-outline btn-sm" onclick="exportFilteredPlaylist()" style="font-size:0.68rem;display:none" title="Export filtered tracks to Spotify playlist">→ Spotify</button>
         <button id="reset-filter-btn" class="btn-outline btn-sm" onclick="showAllSongs()" style="font-size:0.68rem;display:none">Reset</button>
+      </div>
+      <div style="padding:0.3rem 0.4rem 0">
+        <input id="genre-search" type="text" placeholder="Filter genres..." autocomplete="off"
+          style="width:100%;box-sizing:border-box;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 0.5rem;color:#eee;font-size:0.75rem;outline:none;font-family:inherit"
+          onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
+          oninput="renderGenreTree()" />
       </div>
       <div class="genre-list" id="genre-list"></div>
       <div class="filter-section">
@@ -352,7 +361,16 @@
     <div class="song-panel">
       <div class="song-toolbar">
         <input type="text" id="search-input" placeholder="Search songs..." oninput="filterSongs()" />
-        <button class="btn-outline btn-sm" id="uncat-toggle" onclick="toggleUncategorized()">Untagged</button>
+        <div style="position:relative">
+          <button class="btn-outline btn-sm" id="incomplete-toggle" onclick="toggleIncompleteDropdown()" style="white-space:nowrap">Incomplete ▾</button>
+          <div id="incomplete-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem;z-index:40;display:none;flex-direction:column;gap:0.3rem;min-width:130px;box-shadow:0 4px 16px rgba(0,0,0,0.6)">
+            <div style="font-size:0.65rem;color:#555;padding:0 0.1rem 0.2rem;border-bottom:1px solid #222;margin-bottom:0.1rem">Show tracks missing:</div>
+            <button class="incomplete-pill" data-field="genre" onclick="toggleIncompleteField('genre')">Genre</button>
+            <button class="incomplete-pill" data-field="year" onclick="toggleIncompleteField('year')">Year</button>
+            <button class="incomplete-pill" data-field="country" onclick="toggleIncompleteField('country')">Country</button>
+            <button class="incomplete-pill" data-field="energy" onclick="toggleIncompleteField('energy')">Energy</button>
+          </div>
+        </div>
       </div>
       <div id="bulk-bar" style="flex-wrap:wrap;row-gap:0.4rem">
         <span class="bulk-label" id="bulk-label">0 selected</span>
@@ -459,34 +477,25 @@
   </div>
 </div>
 
-<!-- EXPORT MODAL -->
+<!-- BACKUP MODAL -->
 <div id="export-modal">
   <div class="modal-box">
     <div class="modal-head">
-      <strong style="font-size:0.9rem">Export</strong>
+      <strong style="font-size:0.9rem">Backup & Restore</strong>
       <button class="btn-outline btn-sm" onclick="hideExportModal()">✕</button>
     </div>
-    <div style="font-size:0.75rem;color:#666;margin-bottom:0.6rem">Push genres to Spotify playlists</div>
-    <div id="export-list"></div>
-    <button class="btn-green btn-sm" style="margin-top:0.75rem;width:100%" onclick="exportAllPlaylists()">Export All to Spotify</button>
-    <div style="border-top:1px solid #222;margin-top:1rem;padding-top:1rem">
-      <div style="font-size:0.75rem;color:#666;margin-bottom:0.6rem">Download all tags as CSV</div>
-      <button class="btn-outline btn-sm" style="width:100%" onclick="downloadCSV()">Download CSV</button>
-    </div>
-    <div style="border-top:1px solid #222;margin-top:1rem;padding-top:1rem">
-      <div style="font-size:0.75rem;color:#eee;margin-bottom:0.25rem;font-weight:600">Backup & Restore</div>
-      <div style="font-size:0.72rem;color:#555;margin-bottom:0.6rem;line-height:1.5">Full backup of all tags, genres, years, countries, and your library. Use this to move to a new browser or machine.</div>
-      <button class="btn-outline btn-sm" style="width:100%;margin-bottom:0.4rem" onclick="downloadBackup()">Download Backup (.json)</button>
-      <label style="display:block;width:100%">
-        <div class="btn-outline btn-sm" style="width:100%;text-align:center;cursor:pointer;box-sizing:border-box"
-          onmouseover="this.style.borderColor='#555';this.style.color='#eee'"
-          onmouseout="this.style.borderColor='';this.style.color=''">
-          Restore from Backup...
-        </div>
-        <input type="file" accept=".json" style="display:none" onchange="restoreBackup(this)" />
-      </label>
-      <div id="restore-status" style="font-size:0.7rem;margin-top:0.4rem;display:none"></div>
-    </div>
+    <div style="font-size:0.72rem;color:#555;margin-bottom:0.9rem;line-height:1.5">Full backup of all tags, genres, years, countries, and your library. Use this to move to a new browser or machine.</div>
+    <button class="btn-outline btn-sm" style="width:100%;margin-bottom:0.4rem" onclick="downloadBackup()">Download Backup (.json)</button>
+    <button class="btn-outline btn-sm" style="width:100%;margin-bottom:0.4rem" onclick="downloadCSV()">Download CSV</button>
+    <label style="display:block;width:100%">
+      <div class="btn-outline btn-sm" style="width:100%;text-align:center;cursor:pointer;box-sizing:border-box"
+        onmouseover="this.style.borderColor='#555';this.style.color='#eee'"
+        onmouseout="this.style.borderColor='';this.style.color=''">
+        Restore from Backup...
+      </div>
+      <input type="file" accept=".json" style="display:none" onchange="restoreBackup(this)" />
+    </label>
+    <div id="restore-status" style="font-size:0.7rem;margin-top:0.4rem;display:none"></div>
   </div>
 </div>
 
@@ -561,7 +570,7 @@ let selectedEnergyFilter = null;
 let countryDropdownContinent = null;
 let yearBucketSize = 5;
 const YEAR_BUCKET_SIZES = [1, 5, 10, 25];
-let showUncategorizedOnly = false;
+let incompleteFields = new Set(); // 'genre' | 'year' | 'country' | 'energy'
 let currentOffset = 0;
 let totalTracks = 0;
 let isLoading = false;
@@ -581,6 +590,7 @@ let colorIdx = 0;
 
 // ── PERSISTENCE ──
 function saveData() {
+  invalidateGenreCounts();
   localStorage.setItem('objectsort_genres', JSON.stringify(genres));
   localStorage.setItem('objectsort_tags', JSON.stringify(tags));
   localStorage.setItem('objectsort_tracks', JSON.stringify(tracks));
@@ -615,6 +625,7 @@ function loadData() {
     if (!m.countries) m.countries = [];
   });
   colorIdx = genres.length % COLORS.length;
+  invalidateGenreCounts();
   // Deduplicate colors across existing genres
   const usedColors = new Set();
   genres.forEach(g => {
@@ -864,17 +875,21 @@ function getGenrePath(id) {
 function renderGenreTree() {
   const list = document.getElementById('genre-list');
   list.innerHTML = '';
-  genres.filter(g => !g.parentId)
+  const q = (document.getElementById('genre-search')?.value || '').toLowerCase().trim();
+  const matchesSearch = g => !q || g.name.toLowerCase().includes(q) ||
+    genres.filter(c => c.parentId === g.id).some(c => c.name.toLowerCase().includes(q));
+  genres.filter(g => !g.parentId && matchesSearch(g))
     .sort((a, b) => getTrackCountForGenre(b.id) - getTrackCountForGenre(a.id))
-    .forEach(g => list.appendChild(buildGenreNode(g)));
+    .forEach(g => list.appendChild(buildGenreNode(g, q)));
   updateStats();
 }
 
-function buildGenreNode(genre) {
+function buildGenreNode(genre, searchQ = '') {
   const children = genres.filter(g => g.parentId === genre.id);
   const wrap = document.createElement('div'); wrap.className = 'g-item';
   const row = document.createElement('div');
   row.className = 'g-row' + (selectedGenreFilter.has(genre.id) ? ' selected' : '');
+  row.dataset.genreId = genre.id;
   let clickTimer = null;
   row.onclick = e => {
     if (e.target.classList.contains('g-del') || e.target.tagName === 'INPUT') return;
@@ -882,12 +897,15 @@ function buildGenreNode(genre) {
     clickTimer = setTimeout(() => filterByGenre(genre.id), 220);
   };
   row.ondblclick = e => { clearTimeout(clickTimer); };
+  row.oncontextmenu = e => { e.preventDefault(); filterByGenre(genre.id); };
   const caret = document.createElement('span'); caret.className = 'g-caret';
   caret.textContent = children.length ? '▶' : '';
   const childWrap = document.createElement('div'); childWrap.className = 'g-children';
+  const autoExpand = searchQ && children.some(c => c.name.toLowerCase().includes(searchQ));
   if (children.length) {
     caret.style.cursor = 'pointer';
     caret.onclick = e => { e.stopPropagation(); caret.classList.toggle('open'); childWrap.classList.toggle('open'); };
+    if (autoExpand) { caret.classList.add('open'); childWrap.classList.add('open'); }
   }
   const dot = document.createElement('span'); dot.className = 'g-dot'; dot.style.background = genre.color;
   const name = document.createElement('span'); name.className = 'g-name'; name.textContent = genre.name;
@@ -913,12 +931,27 @@ function buildGenreNode(genre) {
   del.onclick = e => { e.stopPropagation(); if (confirm(`Delete "${genre.name}"?`)) deleteGenre(genre.id); };
   row.append(caret, dot, name, cnt, del);
   wrap.appendChild(row);
-  children.forEach(c => childWrap.appendChild(buildGenreNode(c)));
+  children.forEach(c => childWrap.appendChild(buildGenreNode(c, searchQ)));
   wrap.appendChild(childWrap);
   return wrap;
 }
 
-function getTrackCountForGenre(gid) { return tracks.filter(t => (tags[t.id]||[]).includes(gid)).length; }
+let _genreCountsCache = null;
+function _buildGenreCounts() {
+  const c = {};
+  genres.forEach(g => c[g.id] = 0);
+  Object.values(tags).forEach(gids => gids.forEach(gid => { if (c[gid] !== undefined) c[gid]++; }));
+  return c;
+}
+function getGenreCounts() {
+  if (!_genreCountsCache) _genreCountsCache = _buildGenreCounts();
+  return _genreCountsCache;
+}
+function invalidateGenreCounts() { _genreCountsCache = null; }
+function getTrackCountForGenre(gid) { return getGenreCounts()[gid] || 0; }
+
+let _visibleTracksCache = null;
+function invalidateVisibleTracks() { _visibleTracksCache = null; }
 
 function renderParentSelect() {
   const sel = document.getElementById('new-genre-parent');
@@ -934,10 +967,21 @@ function isFullyTagged(trackId) {
 }
 
 function getVisibleTracks() {
+  if (_visibleTracksCache) return _visibleTracksCache;
   const q = document.getElementById('search-input').value.toLowerCase();
-  return tracks.filter(t => {
-    if (showUncategorizedOnly && isFullyTagged(t.id)) return false;
-    if (selectedGenreFilter.size > 0 && !([...selectedGenreFilter].every(gid => (tags[t.id]||[]).includes(gid)))) return false;
+  const genreFilterArr = [...selectedGenreFilter];
+  const incompleteArr = [...incompleteFields];
+  _visibleTracksCache = tracks.filter(t => {
+    if (incompleteArr.length > 0) {
+      const isMissingSelected = incompleteArr.some(f => {
+        if (f === 'genre') return !(tags[t.id]||[]).length;
+        if (f === 'year') return !trackMeta[t.id]?.year;
+        if (f === 'country') return !(trackMeta[t.id]?.countries?.length);
+        if (f === 'energy') return !trackMeta[t.id]?.energy;
+      });
+      if (!isMissingSelected) return false;
+    }
+    if (genreFilterArr.length > 0 && !genreFilterArr.every(gid => (tags[t.id]||[]).includes(gid))) return false;
     if (selectedYearFilter) {
       const [startStr, endStr] = selectedYearFilter.split('-');
       const start = parseInt(startStr), end = parseInt(endStr);
@@ -956,6 +1000,7 @@ function getVisibleTracks() {
     if (q && !t.title.toLowerCase().includes(q) && !t.artist.toLowerCase().includes(q)) return false;
     return true;
   });
+  return _visibleTracksCache;
 }
 
 const ROW_H = 76;
@@ -976,24 +1021,38 @@ function buildSongRow(t, idx) {
   const title = document.createElement('div'); title.className = 'song-title'; title.textContent = t.title;
   const artist = document.createElement('div'); artist.className = 'song-artist'; artist.textContent = t.artist;
   const tagsDiv = document.createElement('div'); tagsDiv.className = 'song-tags';
-  (tags[t.id]||[]).forEach(gid => {
+  [...(tags[t.id]||[])].sort((a,b) => getTrackCountForGenre(b) - getTrackCountForGenre(a)).forEach(gid => {
     const g = getGenre(gid); if (!g) return;
     const chip = document.createElement('span'); chip.className = 'tag-chip';
     chip.textContent = g.name; chip.style.color = g.color; chip.style.borderColor = g.color + '55';
     tagsDiv.appendChild(chip);
   });
   const meta = trackMeta[t.id];
-  const metaParts = [];
-  if (meta?.year) metaParts.push(meta.year);
-  if (meta?.countries?.length) metaParts.push(meta.countries.join(', '));
-  if (metaParts.length || meta?.energy) {
+  const countries = meta?.countries || [];
+  const hasMetaLine = meta?.year || countries.length || meta?.energy;
+  if (hasMetaLine) {
     const metaLine = document.createElement('div');
     metaLine.style.cssText = 'font-size:0.63rem;color:#3a3a3a;margin-top:2px;display:flex;align-items:center;gap:4px;overflow:hidden';
+    const metaParts = [];
+    if (meta?.year) metaParts.push(meta.year);
     if (metaParts.length) {
       const txt = document.createElement('span');
       txt.style.cssText = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
       txt.textContent = metaParts.join(' · ');
       metaLine.appendChild(txt);
+    }
+    if (countries.length) {
+      const countrySpan = document.createElement('span');
+      countrySpan.style.cssText = 'white-space:nowrap;flex-shrink:0';
+      countrySpan.textContent = (metaParts.length ? '· ' : '') + countries[0];
+      metaLine.appendChild(countrySpan);
+      if (countries.length > 1) {
+        const more = document.createElement('span');
+        more.textContent = `+${countries.length - 1}`;
+        more.title = countries.slice(1).join(', ');
+        more.style.cssText = 'font-size:0.58rem;color:#555;cursor:default;flex-shrink:0;border:1px solid #333;border-radius:4px;padding:0 3px';
+        metaLine.appendChild(more);
+      }
     }
     if (meta?.energy) {
       const dot = document.createElement('span');
@@ -1034,6 +1093,7 @@ function _vsRenderWindow() {
 }
 
 function renderSongList() {
+  invalidateVisibleTracks();
   const list = document.getElementById('song-list');
   if (isLoading && tracks.length === 0) {
     list.innerHTML = '<div class="loading-msg"><div class="spinner"></div>Loading your library...</div>';
@@ -1240,10 +1300,12 @@ function renderYearFilter() {
 
 function renderCountryFilter() {
   const list = document.getElementById('country-filter-list');
-  const countries = [...new Set(Object.values(trackMeta).flatMap(m => m.countries || []).filter(Boolean))].sort();
+  const countMap = {};
+  Object.values(trackMeta).forEach(m => (m.countries || []).forEach(c => { countMap[c] = (countMap[c] || 0) + 1; }));
+  const countries = Object.keys(countMap).sort((a, b) => countMap[b] - countMap[a]);
   list.innerHTML = '';
   countries.forEach(c => {
-    const count = Object.values(trackMeta).filter(m => (m.countries || []).includes(c)).length;
+    const count = countMap[c];
     const chip = document.createElement('span');
     chip.className = 'filter-chip' + (selectedCountryFilter === c ? ' active' : '');
     const countEl = document.createElement('span'); countEl.className = 'chip-count'; countEl.textContent = count;
@@ -1271,7 +1333,7 @@ function renderRegionFilter() {
     list.innerHTML = '<span style="font-size:0.7rem;color:#444;padding:0.2rem">No countries tagged yet</span>';
     return;
   }
-  CONTINENTS.filter(c => continentCounts.has(c)).forEach(continent => {
+  [...continentCounts.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c).forEach(continent => {
     const chip = document.createElement('span');
     chip.className = 'filter-chip' + (selectedRegionFilter === continent ? ' active' : '');
     const countEl = document.createElement('span'); countEl.className = 'chip-count'; countEl.textContent = continentCounts.get(continent);
@@ -1447,25 +1509,47 @@ function createAndTagGenre(name) {
   toggleTag(g.id);
 }
 
-function toggleUncategorized() {
-  showUncategorizedOnly = !showUncategorizedOnly;
+function toggleIncompleteDropdown() {
+  const dd = document.getElementById('incomplete-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'flex' : 'none';
+}
+
+function toggleIncompleteField(field) {
+  if (incompleteFields.has(field)) incompleteFields.delete(field);
+  else incompleteFields.add(field);
+  document.querySelectorAll('.incomplete-pill').forEach(p => {
+    p.classList.toggle('active', incompleteFields.has(p.dataset.field));
+  });
+  document.getElementById('incomplete-toggle').classList.toggle('active', incompleteFields.size > 0);
   selectedGenreFilter = new Set();
-  document.getElementById('uncat-toggle').classList.toggle('active', showUncategorizedOnly);
   updateResetBtn(); renderSongList(); renderGenreTree();
+}
+
+let _renderDebounceTimer = null;
+function debouncedRenderSongList() {
+  clearTimeout(_renderDebounceTimer);
+  _renderDebounceTimer = setTimeout(renderSongList, 80);
 }
 
 function filterByGenre(gid) {
   if (selectedGenreFilter.has(gid)) selectedGenreFilter.delete(gid);
   else selectedGenreFilter.add(gid);
-  showUncategorizedOnly = false;
-  document.getElementById('uncat-toggle').classList.remove('active');
-  updateResetBtn(); renderSongList(); renderGenreTree();
+  incompleteFields = new Set();
+  document.getElementById('incomplete-toggle').classList.remove('active');
+  document.querySelectorAll('.incomplete-pill').forEach(p => p.classList.remove('active'));
+  // Update genre row selected states instantly without rebuilding the tree
+  document.querySelectorAll('#genre-list .g-row[data-genre-id]').forEach(r => {
+    r.classList.toggle('selected', selectedGenreFilter.has(r.dataset.genreId));
+  });
+  updateResetBtn();
+  debouncedRenderSongList();
 }
 
 function showAllSongs() {
-  selectedGenreFilter = new Set(); showUncategorizedOnly = false;
+  selectedGenreFilter = new Set(); incompleteFields = new Set();
   selectedYearFilter = null; selectedCountryFilter = null; selectedRegionFilter = null; selectedEnergyFilter = null;
-  document.getElementById('uncat-toggle').classList.remove('active');
+  document.getElementById('incomplete-toggle').classList.remove('active');
+  document.querySelectorAll('.incomplete-pill').forEach(p => p.classList.remove('active'));
   document.getElementById('reset-filter-btn').style.display = 'none';
   renderSongList(); renderGenreTree();
   // Re-render open filter lists
@@ -1476,9 +1560,9 @@ function showAllSongs() {
 }
 
 function updateResetBtn() {
-  const visible = selectedGenreFilter.size > 0 || showUncategorizedOnly || selectedYearFilter || selectedCountryFilter || selectedRegionFilter || selectedEnergyFilter;
+  const visible = selectedGenreFilter.size > 0 || incompleteFields.size > 0 || selectedYearFilter || selectedCountryFilter || selectedRegionFilter || selectedEnergyFilter;
   document.getElementById('reset-filter-btn').style.display = visible ? 'block' : 'none';
-  document.getElementById('export-filter-btn').style.display = visible ? 'block' : 'none';
+  document.getElementById('export-filter-top-btn').style.display = visible ? 'block' : 'none';
 }
 
 // ── AUDIO FEATURES ──
@@ -1843,8 +1927,9 @@ function startReview() {
   reviewQueue = tracks.filter(t => !isFullyTagged(t.id));
   if (!reviewQueue.length) { setStatus('No untagged songs to review'); return; }
   reviewIndex = 0; reviewMode = true;
-  showUncategorizedOnly = true;
-  document.getElementById('uncat-toggle').classList.add('active');
+  incompleteFields = new Set(['genre', 'year', 'country', 'energy']);
+  document.getElementById('incomplete-toggle').classList.add('active');
+  document.querySelectorAll('.incomplete-pill').forEach(p => p.classList.add('active'));
   renderSongList(); updateReviewBar();
   selectTrack(reviewQueue[0].id);
   setTimeout(() => { if (audio.src) { audio.play(); document.getElementById('audio-btn').textContent = '⏸'; } }, 400);
@@ -1900,10 +1985,8 @@ function seekAudio(e) {
 }
 
 // ── EXPORT ──
-function showExportModal() {
-  renderExportList();
-  document.getElementById('export-modal').classList.add('open');
-}
+function showBackupModal() { document.getElementById('export-modal').classList.add('open'); }
+function showExportModal() { showBackupModal(); }
 
 function hideExportModal() { document.getElementById('export-modal').classList.remove('open'); }
 
@@ -1960,11 +2043,11 @@ async function exportFilteredPlaylist() {
   if (selectedCountryFilter) parts.push(selectedCountryFilter);
   if (selectedRegionFilter) parts.push(selectedRegionFilter);
   if (selectedEnergyFilter) parts.push(ENERGY_LABELS[selectedEnergyFilter]);
-  if (showUncategorizedOnly) parts.push('Untagged');
+  if (incompleteFields.size > 0) parts.push('Missing ' + [...incompleteFields].join('+'));
   const q = document.getElementById('search-input').value.trim();
   if (q) parts.push(`"${q}"`);
   const name = `objectsort: ${parts.join(' + ') || 'filtered'} (${visible.length})`;
-  const btn = document.getElementById('export-filter-btn');
+  const btn = document.getElementById('export-filter-top-btn');
   btn.disabled = true; btn.textContent = 'Exporting...';
   try {
     const me = await api('/me');
@@ -2088,6 +2171,12 @@ function updateLibraryBar() {
 }
 
 // ── KEYBOARD NAV ──
+document.addEventListener('click', e => {
+  const dd = document.getElementById('incomplete-dropdown');
+  const toggle = document.getElementById('incomplete-toggle');
+  if (dd && !dd.contains(e.target) && e.target !== toggle) dd.style.display = 'none';
+});
+
 document.addEventListener('keydown', e => {
   const tag = document.activeElement.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
