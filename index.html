@@ -894,7 +894,7 @@ function buildGenreNode(genre, searchQ = '') {
   row.onclick = e => {
     if (e.target.classList.contains('g-del') || e.target.tagName === 'INPUT') return;
     clearTimeout(clickTimer);
-    clickTimer = setTimeout(() => filterByGenre(genre.id), 220);
+    clickTimer = setTimeout(() => filterByGenreExclusive(genre.id), 220);
   };
   row.ondblclick = e => { clearTimeout(clickTimer); };
   row.oncontextmenu = e => { e.preventDefault(); filterByGenre(genre.id); };
@@ -1523,6 +1523,19 @@ function toggleIncompleteField(field) {
   document.getElementById('incomplete-toggle').classList.toggle('active', incompleteFields.size > 0);
   selectedGenreFilter = new Set();
   updateResetBtn(); renderSongList(); renderGenreTree();
+}
+
+function filterByGenreExclusive(gid) {
+  const onlyThis = selectedGenreFilter.size === 1 && selectedGenreFilter.has(gid);
+  selectedGenreFilter = onlyThis ? new Set() : new Set([gid]);
+  incompleteFields = new Set();
+  document.getElementById('incomplete-toggle').classList.remove('active');
+  document.querySelectorAll('.incomplete-pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#genre-list .g-row[data-genre-id]').forEach(r => {
+    r.classList.toggle('selected', selectedGenreFilter.has(r.dataset.genreId));
+  });
+  updateResetBtn();
+  debouncedRenderSongList();
 }
 
 let _renderDebounceTimer = null;
