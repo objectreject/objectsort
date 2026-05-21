@@ -371,6 +371,7 @@
             style="display:none;position:absolute;right:0.4rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#555;cursor:pointer;font-size:0.85rem;line-height:1;padding:0">✕</button>
         </div>
         <button class="btn-outline btn-sm" onclick="jumpToSelected()" title="Jump to selected track" style="white-space:nowrap;flex-shrink:0">⌖</button>
+        <button class="btn-outline btn-sm" id="flagged-toggle" onclick="toggleFlaggedFilter()" title="Show flagged tracks" style="white-space:nowrap;flex-shrink:0">⚑</button>
         <div style="position:relative">
           <button class="btn-outline btn-sm" id="incomplete-toggle" onclick="toggleIncompleteDropdown()" style="white-space:nowrap">Incomplete ▾</button>
           <div id="incomplete-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem;z-index:40;display:none;flex-direction:column;gap:0.3rem;min-width:130px;box-shadow:0 4px 16px rgba(0,0,0,0.6)">
@@ -410,6 +411,8 @@
             <a id="discogs-btn" class="detail-link" href="#" target="_blank">discogs ↗</a>
             <a id="mb-btn" class="detail-link" href="#" target="_blank">musicbrainz ↗</a>
             <a id="everynoise-btn" class="detail-link" href="https://everynoise.com" target="_blank">everynoise ↗</a>
+            <button id="flag-btn" onclick="toggleFlagSelected()"
+              style="background:none;border:1px solid #2a2a2a;border-radius:5px;color:#555;font-size:0.72rem;cursor:pointer;padding:0.15rem 0.5rem;font-family:inherit;transition:all 0.15s">◆ Flag</button>
           </div>
           <div class="section-label" style="margin-top:0.5rem">Your Tags</div>
           <div class="current-tags" id="current-tags" style="margin-bottom:1.2rem"></div>
@@ -518,6 +521,7 @@ let genres = [];
 let tags = {};
 let genreMappings = {};
 let trackMeta = {}; // { trackId: { countries: [], year } }
+let flagged = new Set();
 let artistGenreCache = {};
 let tempoCache = {};
 
@@ -566,7 +570,7 @@ const CONTINENTS = ['Africa','Asia','Europe','North America','Oceania','South Am
 
 const ENERGY_LEVELS = ['high','medium-high','medium','medium-low','low'];
 const ENERGY_LABELS  = { 'high':'High', 'medium-high':'Med-High', 'medium':'Medium', 'medium-low':'Med-Low', 'low':'Low' };
-const ENERGY_COLORS  = { 'high':'#e74c3c', 'medium-high':'#e67e22', 'medium':'#2ecc71', 'medium-low':'#3498db', 'low':'#666' };
+const ENERGY_COLORS  = { 'high':'#e74c3c', 'medium-high':'#e67e22', 'medium':'#2ecc71', 'medium-low':'#3498db', 'low':'#9b59b6' };
 
 let selectedTrackId = null;
 let selectedTrackIds = new Set();
@@ -579,6 +583,7 @@ let countryDropdownContinent = null;
 let yearBucketSize = 5;
 const YEAR_BUCKET_SIZES = [1, 5, 10, 25];
 let incompleteFields = new Set(); // 'genre' | 'year' | 'country' | 'energy'
+let showFlaggedOnly = false;
 let currentOffset = 0;
 let totalTracks = 0;
 let isLoading = false;
@@ -606,6 +611,7 @@ function saveData() {
   localStorage.setItem('objectsort_total', String(totalTracks));
   localStorage.setItem('objectsort_genre_mappings', JSON.stringify(genreMappings));
   localStorage.setItem('objectsort_track_meta', JSON.stringify(trackMeta));
+  localStorage.setItem('objectsort_flagged', JSON.stringify([...flagged]));
   if (ACCESS_TOKEN) localStorage.setItem('objectsort_token', ACCESS_TOKEN);
 }
 
@@ -624,6 +630,8 @@ function loadData() {
   if (gm) { try { genreMappings = JSON.parse(gm); } catch(e) {} }
   const tm = localStorage.getItem('objectsort_track_meta');
   if (tm) { try { trackMeta = JSON.parse(tm); } catch(e) {} }
+  const fl = localStorage.getItem('objectsort_flagged');
+  if (fl) { try { flagged = new Set(JSON.parse(fl)); } catch(e) {} }
   // Migrate old single-country string to array
   Object.values(trackMeta).forEach(m => {
     if (m.country !== undefined && !m.countries) {
@@ -980,6 +988,7 @@ function getVisibleTracks() {
   const genreFilterArr = [...selectedGenreFilter];
   const incompleteArr = [...incompleteFields];
   _visibleTracksCache = tracks.filter(t => {
+    if (showFlaggedOnly && !flagged.has(t.id)) return false;
     if (incompleteArr.length > 0) {
       const isMissingSelected = incompleteArr.some(f => {
         if (f === 'genre') return !(tags[t.id]||[]).length;
@@ -1073,7 +1082,8 @@ function buildSongRow(t, idx) {
     info.append(title, artist, tagsDiv);
   }
   const play = document.createElement('div'); play.className = 'song-play';
-  if (isFullyTagged(t.id)) { play.textContent = '·'; play.style.color = 'rgba(29,185,84,0.6)'; }
+  if (flagged.has(t.id)) { play.textContent = '◆'; play.style.color = '#e67e22'; play.style.fontSize = '0.55rem'; }
+  else if (isFullyTagged(t.id)) { play.textContent = '·'; play.style.color = 'rgba(29,185,84,0.6)'; }
   row.append(img, info, play);
   return row;
 }
@@ -1100,8 +1110,16 @@ function _vsRenderWindow() {
   }
 }
 
+function renderOpenFilters() {
+  if (document.getElementById('year-filter-list')?.style.display !== 'none') renderYearFilter();
+  if (document.getElementById('country-filter-list')?.style.display !== 'none') renderCountryFilter();
+  if (document.getElementById('region-filter-list')?.style.display !== 'none') renderRegionFilter();
+  if (document.getElementById('energy-filter-list')?.style.display !== 'none') renderEnergyFilter();
+}
+
 function renderSongList() {
   invalidateVisibleTracks();
+  renderOpenFilters();
   const list = document.getElementById('song-list');
   if (isLoading && tracks.length === 0) {
     list.innerHTML = '<div class="loading-msg"><div class="spinner"></div>Loading your library...</div>';
@@ -1127,6 +1145,44 @@ function renderSongList() {
 }
 
 function filterSongs() { renderSongList(); }
+
+function toggleFlag(trackId) {
+  if (flagged.has(trackId)) flagged.delete(trackId);
+  else flagged.add(trackId);
+  saveData();
+  // Update dot on the rendered row without full re-render
+  const row = document.querySelector(`#song-list .song-row[data-track-id="${trackId}"]`);
+  if (row) {
+    const dot = row.querySelector('.song-play');
+    if (dot) {
+      if (flagged.has(trackId)) { dot.textContent = '◆'; dot.style.color = '#e67e22'; dot.style.fontSize = '0.55rem'; }
+      else if (isFullyTagged(trackId)) { dot.textContent = '·'; dot.style.color = 'rgba(29,185,84,0.6)'; }
+      else { dot.textContent = ''; }
+    }
+  }
+  updateFlagBtn(trackId);
+  if (showFlaggedOnly) renderSongList();
+}
+
+function toggleFlagSelected() {
+  if (selectedTrackId) toggleFlag(selectedTrackId);
+}
+
+function updateFlagBtn(trackId) {
+  const btn = document.getElementById('flag-btn');
+  if (!btn) return;
+  const isFlagged = flagged.has(trackId);
+  btn.textContent = isFlagged ? '◆ Flagged' : '◆ Flag';
+  btn.style.color = isFlagged ? '#e67e22' : '#555';
+  btn.style.borderColor = isFlagged ? '#e67e22' : '#2a2a2a';
+}
+
+function toggleFlaggedFilter() {
+  showFlaggedOnly = !showFlaggedOnly;
+  document.getElementById('flagged-toggle').style.color = showFlaggedOnly ? '#e67e22' : '';
+  document.getElementById('flagged-toggle').style.borderColor = showFlaggedOnly ? '#e67e22' : '';
+  renderSongList();
+}
 
 function jumpToSelected() {
   if (!selectedTrackId) return;
@@ -1937,7 +1993,7 @@ function selectTrack(id) {
   document.getElementById('audio-fill').style.width = '0%';
   document.getElementById('audio-time').textContent = '0:00';
 
-  renderCurrentTags(); renderMeta(t); showTagBubble();
+  renderCurrentTags(); renderMeta(t); showTagBubble(); updateFlagBtn(id);
   document.querySelectorAll('#song-list .song-row').forEach(r => {
     r.classList.toggle('active', r.dataset.trackId === id);
     r.classList.remove('bulk-selected');
