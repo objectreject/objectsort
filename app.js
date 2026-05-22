@@ -315,9 +315,9 @@ async function loadTracks() {
   }
   setStatus(`All ${tracks.length.toLocaleString()} tracks loaded`);
   isLoading = false;
-  updateLibraryBar();
   renderSongList();
   updateStats();
+  startStatTicker();
 }
 
 async function loadMoreTracks(reset=false) {
@@ -340,7 +340,7 @@ async function loadMoreTracks(reset=false) {
   setProgress(100);
   setTimeout(() => setProgress(0), 500);
   setStatus(`All ${tracks.length.toLocaleString()} tracks loaded`);
-  saveData(); updateLibraryBar(); renderSongList(); updateStats();
+  saveData(); renderSongList(); updateStats(); startStatTicker();
 }
 
 // ── GENRES ──
@@ -1887,104 +1887,74 @@ function setProgress(pct) {
 }
 
 // ── STAT TICKER ──
-let _tickerTimer = null;
-let _tickerIdx = 0;
+let _tickerCleanup = null;
 
 function buildTickerFacts(totalHours) {
   const h = totalHours;
   const fmt = n => n >= 10 ? Math.round(n).toLocaleString() : n.toFixed(1).replace(/\.0$/, '');
   const pct = n => (n * 100).toFixed(1) + '%';
-
   const yr = new Date().getFullYear();
+
   return [
-    `Logistics is a 2012 Swedish art film that documents, in real time, a pedometer making its journey from a store in Stockholm to a factory in China — played entirely in reverse. There is no dialogue. There are no characters. It runs 857 hours. Your library is ${pct(h / 857)} of the way through it.`,
-    `In 2001, a pipe organ in Halberstadt, Germany began performing a piece by John Cage designed to last 639 years. The next scheduled note change is in 2040. Everyone alive today who has heard it will be dead before it ends. By the time it finishes, your library will have played ${fmt((639 * 8760) / h)} times.`,
-    `The Mousetrap is Agatha Christie's murder mystery — it has been running continuously in London's West End since 1952, making it the longest-running stage production in history. The identity of the killer has been kept secret for over 70 years by a gentleman's agreement with the audience, who are asked at the end not to spoil it. Since opening night, your library would have played ${fmt(((yr - 1952) * 8760) / h)} times before tonight's curtain call.`,
-    `In 1927, a professor at the University of Queensland set up an experiment to demonstrate that tar pitch — which appears solid — is actually a liquid. Only 9 drops have fallen since. The experiment has outlived every scientist who ever worked on it. Your library plays ${fmt((10 * 8760) / h)} times while a single drop falls.`,
-    `In 2010, John Isner and Nicolas Mahut played the longest tennis match in recorded history across three days at Wimbledon. The final set alone lasted 8 hours and 11 minutes. Mahut lost — and then, the following morning, lost again in the first round of doubles. You could watch the entire match ${fmt(h / 11.08)} times.`,
-    `The Oxford Electric Bell has been ringing continuously since 1840 — making it one of the longest-running experiments in scientific history. It has rung an estimated 10 billion times. No one has ever opened it to see what's inside, because doing so would end the experiment. Nobody knows when the battery will die. Your library plays ${fmt(((yr - 1840) * 8760) / h)} times before the bell catches up to today.`,
-    `The Cure for Insomnia is a 1987 experimental film consisting entirely of a man named L.D. Groban reading his 4,080-page poem — accompanied by intermittent heavy metal. It was screened once, in full, at the Art Institute of Chicago. It is not available to stream. You could watch it ${fmt(h / 87)} times.`,
-    `Wagner's Ring Cycle is a series of four operas composed over 26 years, intended to be performed across four consecutive nights. Wagner also designed and built a dedicated theatre in Bayreuth, Germany specifically for its performance — it has been staging the cycle every summer since 1876. You could sit through ${fmt(h / 15)} complete cycles.`,
-    `In 1989, Ivan Nikolic and Goran Arsovic sat down for a chess match in Belgrade that lasted 20 hours and 15 minutes across 269 moves. The game was so long it required a rule change — the draw-by-repetition rule was introduced partly because of it. When it was over, they agreed to a draw. You could replay it ${fmt(h / 20.25)} times.`,
-    `Hiroo Onoda was a Japanese soldier stationed in the Philippine jungle during WWII. When the war ended in 1945, nobody told him. He kept fighting — conducting guerrilla operations and living off the land — until 1974, when his former commanding officer flew in personally to relieve him of duty. During those 29 years, your library would have played ${fmt((29 * 8760) / h)} times.`,
-    `Elaine Esposito fell into a coma during a routine appendix operation in 1941. She was six years old. She never woke up. She died 37 years and 111 days later — still unconscious, still breathing — setting a record that has never been broken. Your library would have played ${fmt(((37 + 111/365) * 8760) / h)} times.`,
+    `Logistics is a 2012 Swedish art film that documents, in real time, a pedometer making its journey from a store in Stockholm to a factory in China — played entirely in reverse. There is no dialogue. There are no characters. It runs 857 hours. Listening to your library back-to-back would get you ${pct(h / 857)} of the way through it.`,
+    `In 2001, a pipe organ in Halberstadt, Germany began performing a piece by John Cage designed to last 639 years. The next scheduled note change is in 2040. Everyone alive today who has heard it will be dead before it ends. By the time it finishes, you could have listened to your entire library ${fmt((639 * 8760) / h)} times.`,
+    `The Mousetrap is Agatha Christie's murder mystery — it has been running continuously in London's West End since 1952, making it the longest-running stage production in history. The identity of the killer has been kept secret for over 70 years by a gentleman's agreement with the audience, who are asked at the end not to spoil it. Since opening night, you could have listened to your entire library ${fmt(((yr - 1952) * 8760) / h)} times before tonight's curtain call.`,
+    `In 1927, a professor at the University of Queensland set up an experiment to demonstrate that tar pitch — which appears solid — is actually a liquid. Only 9 drops have fallen since. The experiment has outlived every scientist who ever worked on it. You could listen to your entire library ${fmt((10 * 8760) / h)} times while a single drop falls.`,
+    `In 2010, John Isner and Nicolas Mahut played the longest tennis match in recorded history across three days at Wimbledon. The final set alone lasted 8 hours and 11 minutes. Mahut lost — and then, the following morning, lost again in the first round of doubles. You could listen to your entire library ${fmt(h / 11.08)} times in the duration of that match.`,
+    `The Oxford Electric Bell has been ringing continuously since 1840 — making it one of the longest-running experiments in scientific history. It has rung an estimated 10 billion times. No one has ever opened it to see what's inside, because doing so would end the experiment. Nobody knows when the battery will die. You could listen to your entire library ${fmt(((yr - 1840) * 8760) / h)} times before the bell catches up to today.`,
+    `The Cure for Insomnia is a 1987 experimental film consisting entirely of a man named L.D. Groban reading his 4,080-page poem — accompanied by intermittent heavy metal. It was screened once, in full, at the Art Institute of Chicago. It is not available to stream. You could listen to your entire library ${fmt(h / 87)} times in its runtime.`,
+    `Wagner's Ring Cycle is a series of four operas composed over 26 years, intended to be performed across four consecutive nights. Wagner also designed and built a dedicated theatre in Bayreuth, Germany specifically for its performance — it has been staging the cycle every summer since 1876. You could listen to your entire library ${fmt(h / 15)} times across those four nights.`,
+    `In 1989, Ivan Nikolic and Goran Arsovic sat down for a chess match in Belgrade that lasted 20 hours and 15 minutes across 269 moves. The game was so long it required a rule change — the draw-by-repetition rule was introduced partly because of it. When it was over, they agreed to a draw. You could listen to your entire library ${fmt(h / 20.25)} times in the time it took to play.`,
+    `Hiroo Onoda was a Japanese soldier stationed in the Philippine jungle during WWII. When the war ended in 1945, nobody told him. He kept fighting — conducting guerrilla operations and living off the land — until 1974, when his former commanding officer flew in personally to relieve him of duty. During those 29 years, you could have listened to your entire library ${fmt((29 * 8760) / h)} times.`,
+    `Elaine Esposito fell into a coma during a routine appendix operation in 1941. She was six years old. She never woke up. She died 37 years and 111 days later — still unconscious, still breathing — setting a record that has never been broken. You could have listened to your entire library ${fmt(((37 + 111/365) * 8760) / h)} times.`,
   ].sort(() => Math.random() - 0.5);
 }
 
 function startStatTicker() {
+  if (_tickerCleanup) return; // already running
   const totalMs = tracks.reduce((sum, t) => sum + (t.duration_ms || 0), 0);
   if (totalMs === 0) return;
   const totalHours = totalMs / 3600000;
+  if (totalHours < 50) return;
   const facts = buildTickerFacts(totalHours);
   const ticker = document.getElementById('stat-ticker');
   const track = document.getElementById('stat-ticker-track');
   if (!ticker || !track) return;
 
+  // All facts in one continuous crawl, separated by a spacer
+  const separated = facts.map((f, i) => f + (i % 2 === 0 ? '          ♃          ' : '          ♄          ')).join('');
+  track.textContent = separated;
   ticker.style.display = 'block';
-  _tickerIdx = 0;
 
-  function showNext() {
-    const text = facts[_tickerIdx % facts.length];
-    _tickerIdx++;
+  requestAnimationFrame(() => {
+    const containerW = ticker.offsetWidth;
+    const textW = track.scrollWidth;
+    const pxPerSec = 55; // leisurely news-ticker pace
+    const durationMs = Math.round((containerW + textW) / pxPerSec * 1000);
 
-    // measure text width to set scroll duration proportionally
-    track.style.animation = 'none';
-    track.style.left = '100vw';
-    track.textContent = text;
+    function scroll() {
+      track.style.transition = 'none';
+      track.style.transform = `translateX(${containerW}px)`;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        track.style.transition = `transform ${durationMs}ms linear`;
+        track.style.transform = `translateX(-${textW}px)`;
+      }));
+    }
 
-    // scroll speed: ~22px/s (deliberately slow)
-    const textWidth = track.scrollWidth;
-    const scrollDist = window.innerWidth + textWidth;
-    const duration = scrollDist / 22; // seconds
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        track.style.transition = `left ${duration}s linear`;
-        track.style.left = `-${textWidth + 40}px`;
-        // queue next fact after this one finishes + 0.8s pause
-        _tickerTimer = setTimeout(showNext, (duration + 0.8) * 1000);
-      });
-    });
-  }
-
-  showNext();
+    track.addEventListener('transitionend', scroll);
+    scroll();
+    _tickerCleanup = () => track.removeEventListener('transitionend', scroll);
+  });
 }
 
 function stopStatTicker() {
-  clearTimeout(_tickerTimer);
+  if (_tickerCleanup) { _tickerCleanup(); _tickerCleanup = null; }
   const ticker = document.getElementById('stat-ticker');
   if (ticker) ticker.style.display = 'none';
 }
 
 function updateLibraryBar() {
-  const loaded = tracks.length, total = totalTracks || 0;
-  document.getElementById('lib-loaded').textContent = loaded.toLocaleString();
-  document.getElementById('lib-total').textContent = total > 0 ? total.toLocaleString() : '—';
-  document.getElementById('lib-fill').style.width = total > 0 ? (loaded/total*100) + '%' : '0%';
-  const statusEl = document.getElementById('load-status');
-  const libBar = document.getElementById('library-bar');
-  if (isLoading) {
-    statusEl.textContent = 'fetching...';
-    document.getElementById('lib-fill').classList.add('loading');
-    libBar.style.opacity = '1';
-    libBar.style.maxHeight = '40px';
-  } else if (total > 0 && loaded >= total) {
-    statusEl.textContent = '✓ complete';
-    document.getElementById('lib-fill').classList.remove('loading');
-    setTimeout(() => {
-      libBar.style.transition = 'opacity 0.6s, max-height 0.5s 0.4s, padding 0.5s 0.4s';
-      libBar.style.opacity = '0';
-      libBar.style.maxHeight = '0';
-      libBar.style.padding = '0';
-      libBar.style.borderBottom = 'none';
-      setTimeout(() => startStatTicker(), 600);
-    }, 1200);
-  } else {
-    statusEl.textContent = '';
-    document.getElementById('lib-fill').classList.remove('loading');
-    libBar.style.opacity = '1';
-    libBar.style.maxHeight = '40px';
-  }
+  // Library bar removed from HTML — this is now a no-op kept for call-site compatibility
 }
 
 // ── KEYBOARD NAV ──
