@@ -8,7 +8,6 @@
 </head>
 <body>
 
-<div id="load-progress" style="width:0%"></div>
 
 <!-- SETUP -->
 <div id="setup">
@@ -25,7 +24,7 @@
       3. Copy the Redirect URI below into your Spotify app settings, click Add then Save<br>
       4. Paste your Client ID above<br><br>
       <strong style="color:#aaa">Redirect URI to use:</strong><br>
-      <code id="redirect-uri-display" style="color:#1db954;font-size:0.78rem;word-break:break-all;display:block;margin:0.3rem 0 0.6rem;background:#111;padding:0.4rem 0.5rem;border-radius:4px;border:1px solid #222;">loading...</code>
+      <code id="redirect-uri-display" style="color:#f59e0b;font-size:0.78rem;word-break:break-all;display:block;margin:0.3rem 0 0.6rem;background:#0d1117;padding:0.4rem 0.5rem;border-radius:4px;border:1px solid #1a2634;">loading...</code>
       Your tags are stored only in your browser's localStorage.
     </div>
   </div>
@@ -39,7 +38,6 @@
     <div class="stat-pill">Untagged: <span id="stat-untagged">0</span></div>
     <div class="spacer"></div>
     <button class="btn-outline btn-sm" onclick="showBackupModal()" style="font-size:0.72rem">Backup</button>
-    <button id="export-filter-top-btn" class="btn-outline btn-sm" onclick="exportFilteredPlaylist()" style="font-size:0.72rem;display:none">Export Current Filter</button>
     <button class="btn-outline btn-sm" onclick="logout()" style="font-size:0.72rem">Logout</button>
   </div>
 
@@ -65,8 +63,8 @@
       </div>
       <div style="padding:0.3rem 0.4rem 0;position:relative">
         <input id="genre-search" type="text" placeholder="Filter genres..." autocomplete="off"
-          style="width:100%;box-sizing:border-box;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 1.4rem 0.3rem 0.5rem;color:#eee;font-size:0.75rem;outline:none;font-family:inherit"
-          onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
+          style="width:100%;box-sizing:border-box;background:#0d1117;border:1px solid #1e3048;border-radius:5px;padding:0.3rem 1.4rem 0.3rem 0.5rem;color:#eee;font-size:0.75rem;outline:none;font-family:inherit"
+          onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#1e3048'"
           oninput="renderGenreTree();document.getElementById('genre-search-clear').style.display=this.value?'block':'none'" />
         <button id="genre-search-clear" onclick="document.getElementById('genre-search').value='';this.style.display='none';renderGenreTree()"
           style="display:none;position:absolute;right:0.65rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#555;cursor:pointer;font-size:0.8rem;line-height:1;padding:0">✕</button>
@@ -78,9 +76,9 @@
           <span style="display:flex;align-items:center;gap:0.4rem"><span class="drag-handle">⠿</span>Year</span>
           <span style="display:flex;align-items:center;gap:0.4rem">
             <span id="year-bucket-btn" onclick="event.stopPropagation();cycleYearBucket()"
-              style="font-size:0.65rem;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:1px 5px;color:#666;cursor:pointer"
+              style="font-size:0.65rem;background:#1a2236;border:1px solid #1e3048;border-radius:4px;padding:1px 5px;color:#666;cursor:pointer"
               onmouseover="this.style.color='#eee';this.style.borderColor='#444'"
-              onmouseout="this.style.color='#666';this.style.borderColor='#2a2a2a'">5yr</span>
+              onmouseout="this.style.color='#666';this.style.borderColor='#1e3048'">5yr</span>
             <span id="year-filter-caret">▸</span>
           </span>
         </div>
@@ -121,8 +119,8 @@
         <button class="btn-outline btn-sm" id="flagged-toggle" onclick="toggleFlaggedFilter()" title="Show flagged tracks" style="white-space:nowrap;flex-shrink:0">⚑</button>
         <div style="position:relative">
           <button class="btn-outline btn-sm" id="incomplete-toggle" onclick="toggleIncompleteDropdown()" style="white-space:nowrap">Incomplete ▾</button>
-          <div id="incomplete-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem;z-index:40;display:none;flex-direction:column;gap:0.3rem;min-width:130px;box-shadow:0 4px 16px rgba(0,0,0,0.6)">
-            <div style="font-size:0.65rem;color:#555;padding:0 0.1rem 0.2rem;border-bottom:1px solid #222;margin-bottom:0.1rem">Show tracks missing:</div>
+          <div id="incomplete-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:#0d1117;border:1px solid #1e3048;border-radius:8px;padding:0.5rem;z-index:40;display:none;flex-direction:column;gap:0.3rem;min-width:130px;box-shadow:0 4px 16px rgba(0,0,0,0.6)">
+            <div style="font-size:0.65rem;color:#555;padding:0 0.1rem 0.2rem;border-bottom:1px solid #1a2634;margin-bottom:0.1rem">Show tracks missing:</div>
             <button class="incomplete-pill" data-field="genre" onclick="toggleIncompleteField('genre')">Genre</button>
             <button class="incomplete-pill" data-field="year" onclick="toggleIncompleteField('year')">Year</button>
             <button class="incomplete-pill" data-field="country" onclick="toggleIncompleteField('country')">Country</button>
@@ -133,12 +131,12 @@
       <div id="bulk-bar" style="flex-wrap:wrap;row-gap:0.4rem">
         <span class="bulk-label" id="bulk-label">0 selected</span>
         <input id="bulk-year" type="text" maxlength="4" placeholder="Year..." autocomplete="off"
-          style="width:64px;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 0.5rem;color:#eee;font-size:0.78rem;outline:none;font-family:inherit;flex-shrink:0"
-          onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
+          style="width:64px;background:#0d1117;border:1px solid #1e3048;border-radius:5px;padding:0.3rem 0.5rem;color:#eee;font-size:0.78rem;outline:none;font-family:inherit;flex-shrink:0"
+          onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#1e3048'"
           onkeydown="if(event.key==='Enter')applyBulkYear(this.value)" />
         <input id="bulk-country" type="text" placeholder="Country..." autocomplete="off"
-          style="width:120px;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 0.5rem;color:#eee;font-size:0.78rem;outline:none;font-family:inherit;flex-shrink:0"
-          onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
+          style="width:120px;background:#0d1117;border:1px solid #1e3048;border-radius:5px;padding:0.3rem 0.5rem;color:#eee;font-size:0.78rem;outline:none;font-family:inherit;flex-shrink:0"
+          onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#1e3048'"
           oninput="bulkCountryTypeahead(this)"
           onkeydown="handleBulkCountryInput(event)" />
         <button class="btn-outline btn-sm" onclick="clearBulkSelection()" style="font-size:0.7rem;flex-shrink:0">✕ Clear</button>
@@ -178,16 +176,16 @@
             <div class="meta-field" style="flex:2">
               <div class="meta-label">Country</div>
               <div style="position:relative">
-                <div id="country-tags" style="display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-height:28px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:5px;padding:3px 6px;cursor:text"
+                <div id="country-tags" style="display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-height:28px;background:#1a2236;border:1px solid #1e3048;border-radius:5px;padding:3px 6px;cursor:text"
                   onclick="document.getElementById('country-input').focus()">
                   <input id="country-input" type="text" placeholder="Add..." autocomplete="off"
                     style="border:none;outline:none;background:transparent;color:#eee;font-size:0.78rem;font-family:inherit;width:50px;min-width:40px;flex:1"
-                    onfocus="document.getElementById('country-tags').style.borderColor='#1db954';showCountryDropdown()"
-                    onblur="document.getElementById('country-tags').style.borderColor='#2a2a2a';setTimeout(hideCountryDropdown,150)"
+                    onfocus="document.getElementById('country-tags').style.borderColor='#f59e0b';showCountryDropdown()"
+                    onblur="document.getElementById('country-tags').style.borderColor='#1e3048';setTimeout(hideCountryDropdown,150)"
                     oninput="this.style.width=Math.max(40,this.value.length*8+16)+'px';showCountryDropdown()"
                     onkeydown="handleCountryInput(event)" />
                 </div>
-                <div id="country-dropdown" style="display:none;position:absolute;left:0;right:0;background:#111;border:1px solid #2a2a2a;border-radius:5px;margin-top:2px;max-height:140px;overflow-y:auto;z-index:30"></div>
+                <div id="country-dropdown" style="display:none;position:absolute;left:0;right:0;background:#0d1117;border:1px solid #1e3048;border-radius:5px;margin-top:2px;max-height:140px;overflow-y:auto;z-index:30"></div>
               </div>
             </div>
             <datalist id="country-datalist"></datalist>
@@ -202,12 +200,12 @@
 
           <div style="margin-top:1.2rem;display:flex;justify-content:center">
             <button id="flag-btn" onclick="toggleFlagSelected()"
-              style="background:none;border:1px solid #2a2a2a;border-radius:5px;color:#555;font-size:0.72rem;cursor:pointer;padding:0.25rem 0.7rem;font-family:inherit;transition:all 0.15s">◆ Flag</button>
+              style="background:none;border:1px solid #1e3048;border-radius:5px;color:#555;font-size:0.72rem;cursor:pointer;padding:0.25rem 0.7rem;font-family:inherit;transition:all 0.15s">◆ Flag</button>
           </div>
 
           <a id="spotify-play-btn" href="#" target="_blank"
-             style="display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:1.5rem;padding:0.5rem;border-top:1px solid #1e1e1e;color:#555;text-decoration:none;font-size:0.72rem;transition:color 0.15s"
-             onmouseover="this.style.color='#1db954'" onmouseout="this.style.color='#555'">
+             style="display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:1.5rem;padding:0.5rem;border-top:1px solid #182030;color:#555;text-decoration:none;font-size:0.72rem;transition:color 0.15s"
+             onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#555'">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
             Play on Spotify
           </a>
@@ -222,20 +220,26 @@
       <div class="bubble-inner">
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem">
           <input id="tag-input" type="text" placeholder="Search or create genre..." autocomplete="off"
-            style="flex:1;background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:0.4rem 0.65rem;color:#eee;font-size:0.82rem;outline:none;font-family:inherit"
-            onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
+            style="flex:1;background:#141e30;border:1px solid #1e3048;border-radius:8px;padding:0.4rem 0.65rem;color:#eee;font-size:0.82rem;outline:none;font-family:inherit"
+            onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#1e3048'"
             oninput="showTagDropdown()" onkeydown="handleTagInput(event)" />
           <button onclick="hideTagBubble()" style="background:transparent;border:none;color:#333;font-size:1rem;cursor:pointer;padding:0 2px;line-height:1"
             onmouseover="this.style.color='#888'" onmouseout="this.style.color='#333'">✕</button>
         </div>
-        <div id="tag-dropdown" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;max-height:220px;overflow-y:auto;box-shadow:0 -8px 24px rgba(0,0,0,0.7)"></div>
+        <div id="tag-dropdown" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;background:#09111e;border:1px solid #1e3048;border-radius:10px;max-height:220px;overflow-y:auto;box-shadow:0 -8px 24px rgba(0,0,0,0.7)"></div>
       </div>
     </div>
   </div>
 
   <div id="statusbar">
+    <div id="status-loading-bar" style="position:absolute;top:0;left:0;height:2px;background:#f59e0b;width:0%;transition:width 0.3s;pointer-events:none"></div>
     <span id="status-msg">Ready</span>
-    <span id="status-user"></span>
+    <div style="display:flex;align-items:center;gap:0.6rem">
+      <span id="status-user" style="font-size:0.72rem;color:#444"></span>
+      <button id="export-filter-btn" onclick="exportFilteredPlaylist()"
+        style="display:none;background:#f59e0b;border:none;border-radius:6px;color:#000;font-size:0.75rem;font-weight:700;cursor:pointer;padding:0.3rem 0.8rem;font-family:inherit;transition:background 0.15s"
+        onmouseover="this.style.background='#fbbf24'" onmouseout="this.style.background='#f59e0b'">↗ Export Filtered View</button>
+    </div>
   </div>
 </div>
 

@@ -78,7 +78,7 @@ let reviewIndex = 0;
 const audio = document.getElementById('audio-player');
 
 const COLORS = [
-  '#1db954','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c',
+  '#f59e0b','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c',
   '#e67e22','#e91e8c','#00bcd4','#ff5722','#8bc34a','#607d8b',
   '#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#dda0dd',
   '#98d8c8','#f7dc6f','#bb8fce','#85c1e9','#f0b27a','#82e0aa',
@@ -442,7 +442,7 @@ function buildGenreNode(genre, searchQ = '', hideEmpty = false) {
     clearTimeout(clickTimer);
     const input = document.createElement('input');
     input.value = genre.name;
-    input.style.cssText = 'flex:1;background:#1a1a1a;border:1px solid #1db954;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
+    input.style.cssText = 'flex:1;background:#1a2236;border:1px solid #f59e0b;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
     name.replaceWith(input);
     input.focus(); input.select();
     const commit = () => {
@@ -628,7 +628,7 @@ function buildSongRow(t, idx) {
         const more = document.createElement('span');
         more.textContent = `+${countries.length - 1}`;
         more.title = countries.slice(1).join(', ');
-        more.style.cssText = 'font-size:0.58rem;color:#555;cursor:default;flex-shrink:0;border:1px solid #333;border-radius:4px;padding:0 3px';
+        more.style.cssText = 'font-size:0.58rem;color:#555;cursor:default;flex-shrink:0;border:1px solid #2d3d55;border-radius:4px;padding:0 3px';
         metaLine.appendChild(more);
       }
     }
@@ -644,7 +644,7 @@ function buildSongRow(t, idx) {
   }
   const play = document.createElement('div'); play.className = 'song-play';
   if (flagged.has(t.id)) { play.textContent = '◆'; play.style.color = '#e67e22'; play.style.fontSize = '0.45rem'; }
-  else if (isFullyTagged(t.id)) { play.textContent = '·'; play.style.color = 'rgba(29,185,84,0.6)'; }
+  else if (isFullyTagged(t.id)) { play.textContent = '·'; play.style.color = 'rgba(245,158,11,0.6)'; }
   row.append(img, info, play);
   return row;
 }
@@ -719,7 +719,7 @@ function toggleFlag(trackId) {
     const dot = row.querySelector('.song-play');
     if (dot) {
       if (flagged.has(trackId)) { dot.textContent = '◆'; dot.style.color = '#e67e22'; dot.style.fontSize = '0.45rem'; }
-      else if (isFullyTagged(trackId)) { dot.textContent = '·'; dot.style.color = 'rgba(29,185,84,0.6)'; }
+      else if (isFullyTagged(trackId)) { dot.textContent = '·'; dot.style.color = 'rgba(245,158,11,0.6)'; }
       else { dot.textContent = ''; }
     }
   }
@@ -737,7 +737,7 @@ function updateFlagBtn(trackId) {
   const isFlagged = flagged.has(trackId);
   btn.textContent = isFlagged ? '◆ Flagged' : '◆ Flag';
   btn.style.color = isFlagged ? '#e67e22' : '#555';
-  btn.style.borderColor = isFlagged ? '#e67e22' : '#2a2a2a';
+  btn.style.borderColor = isFlagged ? '#e67e22' : '#1e3048';
 }
 
 function toggleFlaggedFilter() {
@@ -792,7 +792,7 @@ function showBulkDropdown() {
   matches.forEach(g => {
     const item = document.createElement('div');
     item.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.6rem;cursor:pointer;font-size:0.8rem';
-    item.onmouseover = () => item.style.background = '#1a1a1a';
+    item.onmouseover = () => item.style.background = '#1a2236';
     item.onmouseout = () => item.style.background = '';
     const dot = document.createElement('span');
     dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${g.color};flex-shrink:0`;
@@ -803,7 +803,7 @@ function showBulkDropdown() {
   });
   if (q && !matches.find(g => g.name.toLowerCase() === q)) {
     const create = document.createElement('div');
-    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#1db954;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
+    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#f59e0b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
     create.textContent = `+ Create "${input.value.trim()}" and apply to all`;
     create.onmousedown = () => {
       const g = { id: Date.now().toString(), name: input.value.trim(), color: nextColor(), parentId: null };
@@ -995,7 +995,7 @@ function renderEnergySelector(trackId) {
 
   // Base track
   const track = document.createElement('div');
-  track.style.cssText = 'position:absolute;top:8px;left:0;right:0;height:1px;background:#2a2a2a';
+  track.style.cssText = 'position:absolute;top:8px;left:0;right:0;height:1px;background:#1e3048';
   container.appendChild(track);
 
   // Colored gradient fill from left up to selected dot
@@ -1015,10 +1015,10 @@ function renderEnergySelector(trackId) {
     const dot = document.createElement('div');
     dot.style.cssText = `position:absolute;top:3px;left:${pct}%;transform:translateX(-50%);
       width:11px;height:11px;border-radius:50%;z-index:1;cursor:pointer;transition:all 0.15s;
-      background:${isSelected ? color : '#1a1a1a'};border:1px solid ${isSelected ? color : '#333'}`;
+      background:${isSelected ? color : '#1a2236'};border:1px solid ${isSelected ? color : '#2d3d55'}`;
     dot.onclick = () => setEnergy(trackId, isSelected ? null : level);
-    dot.onmouseover = () => { if (!isSelected) { dot.style.background='#2a2a2a'; dot.style.borderColor='#444'; } };
-    dot.onmouseout = () => { if (!isSelected) { dot.style.background='#1a1a1a'; dot.style.borderColor='#333'; } };
+    dot.onmouseover = () => { if (!isSelected) { dot.style.background='#1e3048'; dot.style.borderColor='#444'; } };
+    dot.onmouseout = () => { if (!isSelected) { dot.style.background='#1a2236'; dot.style.borderColor='#2d3d55'; } };
     container.appendChild(dot);
 
     const lbl = document.createElement('div');
@@ -1086,20 +1086,20 @@ function showTagDropdown() {
   matches.forEach(g => {
     const tagged = songTags.includes(g.id);
     const item = document.createElement('div');
-    item.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.6rem;cursor:pointer;font-size:0.8rem' + (tagged ? ';background:rgba(29,185,84,0.08)' : '');
-    item.onmouseover = () => item.style.background = tagged ? 'rgba(29,185,84,0.12)' : '#1a1a1a';
-    item.onmouseout = () => item.style.background = tagged ? 'rgba(29,185,84,0.08)' : '';
+    item.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.6rem;cursor:pointer;font-size:0.8rem' + (tagged ? ';background:rgba(245,158,11,0.08)' : '');
+    item.onmouseover = () => item.style.background = tagged ? 'rgba(245,158,11,0.12)' : '#1a2236';
+    item.onmouseout = () => item.style.background = tagged ? 'rgba(245,158,11,0.08)' : '';
     const dot = document.createElement('span');
     dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${g.color};flex-shrink:0`;
     const name = document.createElement('span'); name.textContent = g.name; name.style.flex = '1';
-    const check = document.createElement('span'); check.textContent = tagged ? '✓' : ''; check.style.color = '#1db954';
+    const check = document.createElement('span'); check.textContent = tagged ? '✓' : ''; check.style.color = '#f59e0b';
     item.append(dot, name, check);
     item.onmousedown = () => { if (selectedTrackIds.size > 0) applyBulkTag(g.id); else toggleTag(g.id); input.value = ''; hideTagDropdown(); };
     dropdown.appendChild(item);
   });
   if (!matches.find(g => g.name.toLowerCase() === q)) {
     const create = document.createElement('div');
-    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#1db954;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
+    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#f59e0b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
     create.textContent = `+ Create "${input.value.trim()}"`;
     create.onmousedown = () => { createAndTagGenre(input.value.trim()); input.value = ''; hideTagDropdown(); };
     dropdown.appendChild(create);
@@ -1224,7 +1224,8 @@ function showAllSongs() {
 function updateResetBtn() {
   const visible = selectedGenreFilter.size > 0 || incompleteFields.size > 0 || selectedYearFilter.size > 0 || selectedCountryFilter.size > 0 || selectedRegionFilter.size > 0 || selectedEnergyFilter.size > 0;
   document.getElementById('reset-filter-btn').style.display = visible ? 'block' : 'none';
-  document.getElementById('export-filter-top-btn').style.display = visible ? 'block' : 'none';
+  document.getElementById('export-filter-btn').style.display = visible ? 'inline-block' : 'none';
+  document.getElementById('status-user').style.display = visible ? 'none' : '';
 }
 
 // ── AUDIO FEATURES ──
@@ -1237,7 +1238,7 @@ function renderMeta(track) {
   yearInput.value = meta.year || '';
   yearInput.placeholder = '—';
   if (suggestedYear && !meta.year) {
-    yearSuggest.innerHTML = `Suggested: ${suggestedYear} · <span style="color:#1db954;cursor:pointer" onclick="acceptSuggestedYear('${track.id}','${suggestedYear}')">Accept</span>`;
+    yearSuggest.innerHTML = `Suggested: ${suggestedYear} · <span style="color:#f59e0b;cursor:pointer" onclick="acceptSuggestedYear('${track.id}','${suggestedYear}')">Accept</span>`;
   } else {
     yearSuggest.textContent = '';
   }
@@ -1297,7 +1298,7 @@ function renderCountryTagChips(trackId) {
   const countries = trackMeta[trackId]?.countries || [];
   countries.forEach(c => {
     const chip = document.createElement('span');
-    chip.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;padding:2px 6px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#aaa;flex-shrink:0';
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;padding:2px 6px;background:#0d1117;border:1px solid #1e3048;border-radius:8px;color:#aaa;flex-shrink:0';
     const label = document.createElement('span'); label.textContent = c;
     const del = document.createElement('span');
     del.textContent = '×'; del.style.cssText = 'cursor:pointer;color:#555;line-height:1';
@@ -1343,7 +1344,7 @@ function showCountryDropdown() {
     const item = document.createElement('div');
     item.style.cssText = 'padding:0.32rem 0.6rem;font-size:0.8rem;cursor:pointer;color:#bbb';
     item.textContent = c;
-    item.onmouseover = () => item.style.background = '#1a1a1a';
+    item.onmouseover = () => item.style.background = '#1a2236';
     item.onmouseout = () => item.style.background = '';
     item.onmousedown = () => addCountry(selectedTrackId, c);
     dropdown.appendChild(item);
@@ -1515,13 +1516,13 @@ function toggleMappingPicker(item, spotifyGenre, trackId, onPick) {
 
   const input = document.createElement('input');
   input.placeholder = 'New genre name...';
-  input.style.cssText = 'flex:1;background:#111;border:1px solid #2a2a2a;border-radius:4px;padding:0.25rem 0.4rem;color:#eee;font-size:0.75rem;outline:none;min-width:0';
-  input.onfocus = () => input.style.borderColor = '#1db954';
-  input.onblur = () => input.style.borderColor = '#2a2a2a';
+  input.style.cssText = 'flex:1;background:#0d1117;border:1px solid #1e3048;border-radius:4px;padding:0.25rem 0.4rem;color:#eee;font-size:0.75rem;outline:none;min-width:0';
+  input.onfocus = () => input.style.borderColor = '#f59e0b';
+  input.onblur = () => input.style.borderColor = '#1e3048';
 
   const addBtn = document.createElement('button');
   addBtn.textContent = '+';
-  addBtn.style.cssText = 'background:#1db954;color:#000;border:none;border-radius:4px;padding:0.25rem 0.5rem;font-size:0.78rem;font-weight:700;flex-shrink:0';
+  addBtn.style.cssText = 'background:#f59e0b;color:#000;border:none;border-radius:4px;padding:0.25rem 0.5rem;font-size:0.78rem;font-weight:700;flex-shrink:0';
 
   const createAndApply = () => {
     const name = input.value.trim();
@@ -1568,7 +1569,7 @@ function selectTrack(id) {
     span.onmouseover = () => span.style.color = '#bbb';
     span.onmouseout = () => span.style.color = '#888';
     span.onclick = () => navigator.clipboard.writeText(name).then(() => {
-      const orig = span.textContent; span.textContent = 'Copied!'; span.style.color = '#1db954';
+      const orig = span.textContent; span.textContent = 'Copied!'; span.style.color = '#f59e0b';
       setTimeout(() => { span.textContent = orig; span.style.color = '#888'; }, 1200);
     });
     artistEl.appendChild(span);
@@ -1769,7 +1770,7 @@ async function exportFilteredPlaylist() {
   const q = document.getElementById('search-input').value.trim();
   if (q) parts.push(`"${q}"`);
   const name = `objectsort: ${parts.join(' + ') || 'filtered'} (${visible.length})`;
-  const btn = document.getElementById('export-filter-top-btn');
+  const btn = document.getElementById('export-filter-btn');
   _isExporting = true;
   btn.disabled = true; btn.textContent = 'Exporting...';
   try {
@@ -1787,7 +1788,7 @@ async function exportFilteredPlaylist() {
     setStatus('Export failed: ' + e.message);
   }
   _isExporting = false;
-  btn.disabled = false; btn.textContent = 'Export Current Filter';
+  btn.disabled = false; btn.textContent = '↗ Export Filtered View';
 }
 
 function downloadBackup() {
@@ -1836,7 +1837,7 @@ function restoreBackup(input) {
       saveData();
       renderGenreTree(); renderParentSelect(); renderSongList(); updateStats(); updateLibraryBar();
       statusEl.style.display = 'block';
-      statusEl.style.color = '#1db954';
+      statusEl.style.color = '#f59e0b';
       statusEl.textContent = `✓ Restored ${tracks.length.toLocaleString()} tracks and ${genres.length} genres`;
       setStatus('Backup restored successfully');
     } catch(err) {
@@ -1872,13 +1873,18 @@ function copyArtist(el) {
   navigator.clipboard.writeText(el.textContent).then(() => {
     const orig = el.textContent;
     el.textContent = 'Copied!';
-    el.style.color = '#1db954';
+    el.style.color = '#f59e0b';
     setTimeout(() => { el.textContent = orig; el.style.color = ''; }, 1200);
   });
 }
 
 function setStatus(msg) { document.getElementById('status-msg').textContent = msg; }
-function setProgress(pct) { document.getElementById('load-progress').style.width = pct + '%'; }
+function setProgress(pct) {
+  const bar = document.getElementById('status-loading-bar');
+  if (!bar) return;
+  bar.style.width = pct + '%';
+  bar.style.opacity = pct > 0 && pct < 100 ? '1' : '0';
+}
 
 function updateLibraryBar() {
   const loaded = tracks.length, total = totalTracks || 0;
