@@ -40,8 +40,10 @@ button { cursor: pointer; font-family: inherit; font-size: 0.85rem; border: none
 @keyframes shimmer { to { background-position: 80px 0; } }
 
 /* STAT TICKER */
-#stat-ticker { background: #161616; border-bottom: 1px solid #2a2a2a; height: 28px; flex-shrink: 0; display: none; overflow: hidden; position: relative; }
-#stat-ticker-track { font-size: 0.7rem; color: #444; letter-spacing: 0.02em; white-space: nowrap; position: absolute; line-height: 28px; will-change: transform; }
+#stat-ticker { background: #161616; border-bottom: 1px solid #2a2a2a; height: 28px; flex-shrink: 0; display: none; overflow: hidden; position: relative; cursor: pointer; transition: height 0.3s ease, border-color 0.3s ease; }
+#stat-ticker.collapsed { height: 3px; border-bottom-color: #1f1f1f; }
+#stat-ticker-track { font-size: 0.7rem; color: #444; letter-spacing: 0.02em; white-space: nowrap; position: absolute; line-height: 28px; will-change: transform; transition: opacity 0.3s ease; }
+#stat-ticker.collapsed #stat-ticker-track { opacity: 0; }
 
 /* LAYOUT */
 #app { display: none; flex-direction: column; height: 100vh; overflow: hidden; }

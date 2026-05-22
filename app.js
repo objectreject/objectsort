@@ -1922,14 +1922,16 @@ function startStatTicker() {
   if (!ticker || !track) return;
 
   // All facts in one continuous crawl, separated by a spacer
-  const separated = facts.map((f, i) => f + (i % 2 === 0 ? '          ♃          ' : '          ♄          ')).join('');
-  track.textContent = separated;
+  track.textContent = facts.join('          ※          ');
   ticker.style.display = 'block';
+
+  // Click anywhere on ticker to collapse/expand
+  ticker.addEventListener('click', () => ticker.classList.toggle('collapsed'));
 
   requestAnimationFrame(() => {
     const containerW = ticker.offsetWidth;
     const textW = track.scrollWidth;
-    const pxPerSec = 55; // leisurely news-ticker pace
+    const pxPerSec = 35; // snail pace
     const durationMs = Math.round((containerW + textW) / pxPerSec * 1000);
 
     function scroll() {
