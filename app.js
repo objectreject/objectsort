@@ -7,6 +7,7 @@ let tags = {};
 let genreMappings = {};
 let trackMeta = {}; // { trackId: { countries: [], year } }
 let flagged = new Set();
+let removedIds = new Set();
 let artistGenreCache = {};
 let tempoCache = {};
 
@@ -103,6 +104,7 @@ function saveData() {
   localStorage.setItem('objectsort_genre_mappings', JSON.stringify(genreMappings));
   localStorage.setItem('objectsort_track_meta', JSON.stringify(trackMeta));
   localStorage.setItem('objectsort_flagged', JSON.stringify([...flagged]));
+  localStorage.setItem('objectsort_removed', JSON.stringify([...removedIds]));
   if (ACCESS_TOKEN) localStorage.setItem('objectsort_token', ACCESS_TOKEN);
 }
 
@@ -123,6 +125,8 @@ function loadData() {
   if (tm) { try { trackMeta = JSON.parse(tm); } catch(e) {} }
   const fl = localStorage.getItem('objectsort_flagged');
   if (fl) { try { flagged = new Set(JSON.parse(fl)); } catch(e) {} }
+  const rm = localStorage.getItem('objectsort_removed');
+  if (rm) { try { removedIds = new Set(JSON.parse(rm)); } catch(e) {} }
   // Migrate old single-country string to array
   Object.values(trackMeta).forEach(m => {
     if (m.country !== undefined && !m.countries) {
@@ -295,7 +299,7 @@ async function loadTracks() {
         const t = item.track;
         if (!t) continue;
         if (knownIds.has(t.id)) { foundExisting = true; break; }
-        newTracks.push(mapTrack(t));
+        if (!removedIds.has(t.id)) newTracks.push(mapTrack(t));
       }
       if (foundExisting || !data.next) break;
       offset += data.items.length;
@@ -329,7 +333,7 @@ async function loadMoreTracks(reset=false) {
     const data = await api(`/me/tracks?limit=50&offset=${currentOffset}`);
     if (!data || !data.items || data.items.length === 0) break;
     totalTracks = data.total;
-    for (const item of data.items) { if (item.track) tracks.push(mapTrack(item.track)); }
+    for (const item of data.items) { if (item.track && !removedIds.has(item.track.id)) tracks.push(mapTrack(item.track)); }
     currentOffset += data.items.length;
     setProgress(10 + (currentOffset / totalTracks) * 80);
     updateLibraryBar();
@@ -729,6 +733,50 @@ function toggleFlag(trackId) {
 
 function toggleFlagSelected() {
   if (selectedTrackId) toggleFlag(selectedTrackId);
+}
+
+function removeTrackFromLibrary() {
+  if (!selectedTrackId) return;
+  const btn = document.getElementById('remove-track-btn');
+  if (!btn) return;
+
+  if (btn.dataset.confirming !== 'true') {
+    // First click — ask for confirmation
+    btn.textContent = 'Confirm?';
+    btn.style.color = '#e87';
+    btn.style.borderColor = '#e87';
+    btn.dataset.confirming = 'true';
+    setTimeout(() => {
+      if (btn.dataset.confirming === 'true') {
+        btn.textContent = '✕ Remove';
+        btn.style.color = '#555';
+        btn.style.borderColor = '#2a2a2a';
+        btn.dataset.confirming = 'false';
+      }
+    }, 3000);
+    return;
+  }
+
+  // Second click — remove from local database and blocklist from future syncs
+  const id = selectedTrackId;
+  tracks = tracks.filter(t => t.id !== id);
+  delete tags[id];
+  flagged.delete(id);
+  removedIds.add(id);
+  selectedTrackId = null;
+
+  saveData();
+  renderSongList();
+  updateStats();
+  renderGenreTree();
+
+  document.getElementById('song-detail').style.display = 'none';
+  document.getElementById('no-song-msg').style.display = 'block';
+
+  btn.textContent = '✕ Remove';
+  btn.style.color = '#555';
+  btn.style.borderColor = '#2a2a2a';
+  btn.dataset.confirming = 'false';
 }
 
 function updateFlagBtn(trackId) {
@@ -1922,7 +1970,7 @@ function startStatTicker() {
   if (!ticker || !track) return;
 
   // All facts in one continuous crawl, separated by a spacer
-  track.textContent = facts.join('          ※          ');
+  track.textContent = facts.join('                    ※                    ');
   ticker.style.display = 'block';
 
   // Click anywhere on ticker to collapse/expand
@@ -1931,7 +1979,7 @@ function startStatTicker() {
   requestAnimationFrame(() => {
     const containerW = ticker.offsetWidth;
     const textW = track.scrollWidth;
-    const pxPerSec = 35; // snail pace
+    const pxPerSec = 22; // glacial pace
     const durationMs = Math.round((containerW + textW) / pxPerSec * 1000);
 
     function scroll() {
