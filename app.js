@@ -78,7 +78,7 @@ let reviewIndex = 0;
 const audio = document.getElementById('audio-player');
 
 const COLORS = [
-  '#f59e0b','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c',
+  '#64748b','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c',
   '#e67e22','#e91e8c','#00bcd4','#ff5722','#8bc34a','#607d8b',
   '#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#dda0dd',
   '#98d8c8','#f7dc6f','#bb8fce','#85c1e9','#f0b27a','#82e0aa',
@@ -442,7 +442,7 @@ function buildGenreNode(genre, searchQ = '', hideEmpty = false) {
     clearTimeout(clickTimer);
     const input = document.createElement('input');
     input.value = genre.name;
-    input.style.cssText = 'flex:1;background:#1a1a1a;border:1px solid #f59e0b;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
+    input.style.cssText = 'flex:1;background:#1a1a1a;border:1px solid #64748b;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
     name.replaceWith(input);
     input.focus(); input.select();
     const commit = () => {
@@ -803,7 +803,7 @@ function showBulkDropdown() {
   });
   if (q && !matches.find(g => g.name.toLowerCase() === q)) {
     const create = document.createElement('div');
-    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#f59e0b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
+    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#64748b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
     create.textContent = `+ Create "${input.value.trim()}" and apply to all`;
     create.onmousedown = () => {
       const g = { id: Date.now().toString(), name: input.value.trim(), color: nextColor(), parentId: null };
@@ -1086,20 +1086,20 @@ function showTagDropdown() {
   matches.forEach(g => {
     const tagged = songTags.includes(g.id);
     const item = document.createElement('div');
-    item.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.6rem;cursor:pointer;font-size:0.8rem' + (tagged ? ';background:rgba(245,158,11,0.08)' : '');
-    item.onmouseover = () => item.style.background = tagged ? 'rgba(245,158,11,0.12)' : '#1a1a1a';
-    item.onmouseout = () => item.style.background = tagged ? 'rgba(245,158,11,0.08)' : '';
+    item.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.6rem;cursor:pointer;font-size:0.8rem' + (tagged ? ';background:rgba(100,116,139,0.08)' : '');
+    item.onmouseover = () => item.style.background = tagged ? 'rgba(100,116,139,0.12)' : '#1a1a1a';
+    item.onmouseout = () => item.style.background = tagged ? 'rgba(100,116,139,0.08)' : '';
     const dot = document.createElement('span');
     dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${g.color};flex-shrink:0`;
     const name = document.createElement('span'); name.textContent = g.name; name.style.flex = '1';
-    const check = document.createElement('span'); check.textContent = tagged ? '✓' : ''; check.style.color = '#f59e0b';
+    const check = document.createElement('span'); check.textContent = tagged ? '✓' : ''; check.style.color = '#64748b';
     item.append(dot, name, check);
     item.onmousedown = () => { if (selectedTrackIds.size > 0) applyBulkTag(g.id); else toggleTag(g.id); input.value = ''; hideTagDropdown(); };
     dropdown.appendChild(item);
   });
   if (!matches.find(g => g.name.toLowerCase() === q)) {
     const create = document.createElement('div');
-    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#f59e0b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
+    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#64748b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
     create.textContent = `+ Create "${input.value.trim()}"`;
     create.onmousedown = () => { createAndTagGenre(input.value.trim()); input.value = ''; hideTagDropdown(); };
     dropdown.appendChild(create);
@@ -1238,7 +1238,7 @@ function renderMeta(track) {
   yearInput.value = meta.year || '';
   yearInput.placeholder = '—';
   if (suggestedYear && !meta.year) {
-    yearSuggest.innerHTML = `Suggested: ${suggestedYear} · <span style="color:#f59e0b;cursor:pointer" onclick="acceptSuggestedYear('${track.id}','${suggestedYear}')">Accept</span>`;
+    yearSuggest.innerHTML = `Suggested: ${suggestedYear} · <span style="color:#64748b;cursor:pointer" onclick="acceptSuggestedYear('${track.id}','${suggestedYear}')">Accept</span>`;
   } else {
     yearSuggest.textContent = '';
   }
@@ -1517,12 +1517,12 @@ function toggleMappingPicker(item, spotifyGenre, trackId, onPick) {
   const input = document.createElement('input');
   input.placeholder = 'New genre name...';
   input.style.cssText = 'flex:1;background:#111;border:1px solid #2a2a2a;border-radius:4px;padding:0.25rem 0.4rem;color:#eee;font-size:0.75rem;outline:none;min-width:0';
-  input.onfocus = () => input.style.borderColor = '#f59e0b';
+  input.onfocus = () => input.style.borderColor = '#64748b';
   input.onblur = () => input.style.borderColor = '#2a2a2a';
 
   const addBtn = document.createElement('button');
   addBtn.textContent = '+';
-  addBtn.style.cssText = 'background:#f59e0b;color:#000;border:none;border-radius:4px;padding:0.25rem 0.5rem;font-size:0.78rem;font-weight:700;flex-shrink:0';
+  addBtn.style.cssText = 'background:#64748b;color:#000;border:none;border-radius:4px;padding:0.25rem 0.5rem;font-size:0.78rem;font-weight:700;flex-shrink:0';
 
   const createAndApply = () => {
     const name = input.value.trim();
@@ -1569,7 +1569,7 @@ function selectTrack(id) {
     span.onmouseover = () => span.style.color = '#bbb';
     span.onmouseout = () => span.style.color = '#888';
     span.onclick = () => navigator.clipboard.writeText(name).then(() => {
-      const orig = span.textContent; span.textContent = 'Copied!'; span.style.color = '#f59e0b';
+      const orig = span.textContent; span.textContent = 'Copied!'; span.style.color = '#64748b';
       setTimeout(() => { span.textContent = orig; span.style.color = '#888'; }, 1200);
     });
     artistEl.appendChild(span);
@@ -1837,7 +1837,7 @@ function restoreBackup(input) {
       saveData();
       renderGenreTree(); renderParentSelect(); renderSongList(); updateStats(); updateLibraryBar();
       statusEl.style.display = 'block';
-      statusEl.style.color = '#f59e0b';
+      statusEl.style.color = '#64748b';
       statusEl.textContent = `✓ Restored ${tracks.length.toLocaleString()} tracks and ${genres.length} genres`;
       setStatus('Backup restored successfully');
     } catch(err) {
@@ -1873,7 +1873,7 @@ function copyArtist(el) {
   navigator.clipboard.writeText(el.textContent).then(() => {
     const orig = el.textContent;
     el.textContent = 'Copied!';
-    el.style.color = '#f59e0b';
+    el.style.color = '#64748b';
     setTimeout(() => { el.textContent = orig; el.style.color = ''; }, 1200);
   });
 }
