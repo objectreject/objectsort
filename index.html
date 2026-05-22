@@ -43,6 +43,12 @@
     <button class="btn-outline btn-sm" onclick="logout()" style="font-size:0.72rem">Logout</button>
   </div>
 
+  <div id="backup-banner" style="display:none;align-items:center;gap:0.75rem;padding:0.4rem 1rem;background:#1a1200;border-bottom:1px solid #3a2800;flex-shrink:0">
+    <span style="font-size:0.75rem;color:#f39c12;flex:1">⚠ You haven't backed up in a while — your tags only exist in this browser.</span>
+    <button onclick="downloadBackup();dismissBackupBanner()" style="background:#f39c12;border:none;border-radius:5px;color:#000;font-size:0.72rem;font-weight:600;padding:0.25rem 0.7rem;cursor:pointer;font-family:inherit">Download Backup</button>
+    <button onclick="dismissBackupBanner()" style="background:none;border:none;color:#666;font-size:0.8rem;cursor:pointer;padding:0.1rem 0.3rem">✕</button>
+  </div>
+
   <div id="library-bar">
     <span class="lib-label">Library</span>
     <span class="lib-counts"><span id="lib-loaded">0</span> <em>/</em> <span id="lib-total">—</span> songs loaded</span>
@@ -130,10 +136,11 @@
           style="width:64px;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 0.5rem;color:#eee;font-size:0.78rem;outline:none;font-family:inherit;flex-shrink:0"
           onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
           onkeydown="if(event.key==='Enter')applyBulkYear(this.value)" />
-        <input id="bulk-country" type="text" list="country-datalist" placeholder="Country..." autocomplete="off"
-          style="width:110px;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 0.5rem;color:#eee;font-size:0.78rem;outline:none;font-family:inherit;flex-shrink:0"
+        <input id="bulk-country" type="text" placeholder="Country..." autocomplete="off"
+          style="width:120px;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 0.5rem;color:#eee;font-size:0.78rem;outline:none;font-family:inherit;flex-shrink:0"
           onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'"
-          onkeydown="if(event.key==='Enter')applyBulkCountry(this.value)" />
+          oninput="bulkCountryTypeahead(this)"
+          onkeydown="handleBulkCountryInput(event)" />
         <button class="btn-outline btn-sm" onclick="clearBulkSelection()" style="font-size:0.7rem;flex-shrink:0">✕ Clear</button>
       </div>
       <div class="song-list" id="song-list"></div>

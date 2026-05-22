@@ -83,6 +83,12 @@ const COLORS = [
   '#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#dda0dd',
   '#98d8c8','#f7dc6f','#bb8fce','#85c1e9','#f0b27a','#82e0aa',
   '#f1948a','#7fb3d3','#a9cce3','#d2b4de','#a3e4d7','#fad7a0',
+  '#e040fb','#00e5ff','#76ff03','#ff6d00','#d500f9','#00b0ff',
+  '#c6ff00','#ff4081','#18ffff','#b9f6ca','#ffd180','#ea80fc',
+  '#a7ffeb','#ffff8d','#ff9e80','#80d8ff','#ccff90','#ff80ab',
+  '#b388ff','#69f0ae','#ff6e40','#40c4ff','#b2ff59','#ff4569',
+  '#e6ee9c','#80cbc4','#ce93d8','#ffab40','#4db6ac','#f48fb1',
+  '#c5e1a5','#ffe082','#90caf9','#ef9a9a','#a5d6a7','#fff59d',
 ];
 let colorIdx = 0;
 
@@ -163,7 +169,8 @@ async function startAuth() {
   const params = new URLSearchParams({
     client_id: CLIENT_ID, response_type: 'code', redirect_uri: redirectUri,
     scope: 'user-library-read playlist-modify-public playlist-modify-private',
-    code_challenge_method: 'S256', code_challenge: challenge
+    code_challenge_method: 'S256', code_challenge: challenge,
+    show_dialog: 'true'
   });
   location.href = 'https://accounts.spotify.com/authorize?' + params;
 }
@@ -418,6 +425,16 @@ function buildGenreNode(genre, searchQ = '', hideEmpty = false) {
     if (autoExpand) { caret.classList.add('open'); childWrap.classList.add('open'); }
   }
   const dot = document.createElement('span'); dot.className = 'g-dot'; dot.style.background = genre.color;
+  dot.title = 'Click to change color';
+  dot.style.cursor = 'pointer';
+  dot.onclick = e => {
+    e.stopPropagation();
+    const idx = COLORS.indexOf(genre.color);
+    genre.color = COLORS[(idx + 1) % COLORS.length];
+    dot.style.background = genre.color;
+    saveData();
+    document.querySelectorAll(`#genre-list .g-row[data-genre-id="${genre.id}"] .g-dot`).forEach(d => d.style.background = genre.color);
+  };
   const name = document.createElement('span'); name.className = 'g-name'; name.textContent = genre.name;
   name.title = 'Double-click to rename';
   name.ondblclick = e => {
@@ -844,6 +861,7 @@ function applyBulkYear(year) {
   });
   saveData();
   document.getElementById('bulk-year').value = '';
+  renderSongList();
   if (selectedTrackId && selectedTrackIds.has(selectedTrackId)) {
     const t = tracks.find(x => x.id === selectedTrackId);
     if (t) renderMeta(t);
@@ -860,6 +878,7 @@ function applyBulkCountry(country) {
   });
   saveData();
   document.getElementById('bulk-country').value = '';
+  renderSongList();
   if (selectedTrackId && selectedTrackIds.has(selectedTrackId)) {
     const t = tracks.find(x => x.id === selectedTrackId);
     if (t) renderMeta(t);
@@ -887,7 +906,7 @@ function cycleYearBucket() {
 function renderYearFilter() {
   const list = document.getElementById('year-filter-list');
   const years = getVisibleTracks().map(t => {
-    const y = trackMeta[t.id]?.year || (t.releaseDate ? t.releaseDate.slice(0,4) : null);
+    const y = trackMeta[t.id]?.year;
     return y ? parseInt(y) : null;
   }).filter(Boolean);
   if (!years.length) {
@@ -1025,9 +1044,15 @@ function renderEnergyFilter() {
   const list = document.getElementById('energy-filter-list');
   list.innerHTML = '';
   let hasAny = false;
-  const visibleIds = new Set(getVisibleTracks().map(t => t.id));
+  // Count from tracks matching all filters except energy, so other levels remain clickable
+  const savedEnergy = selectedEnergyFilter;
+  selectedEnergyFilter = new Set();
+  invalidateVisibleTracks();
+  const baseIds = new Set(getVisibleTracks().map(t => t.id));
+  selectedEnergyFilter = savedEnergy;
+  invalidateVisibleTracks();
   ENERGY_LEVELS.forEach(level => {
-    const count = Object.entries(trackMeta).filter(([id, m]) => visibleIds.has(id) && m.energy === level).length;
+    const count = Object.entries(trackMeta).filter(([id, m]) => baseIds.has(id) && m.energy === level).length;
     if (!count) return;
     hasAny = true;
     const chip = document.createElement('span');
@@ -1218,10 +1243,14 @@ function renderMeta(track) {
   }
   yearInput.onchange = () => {
     const v = yearInput.value.trim();
-    if (!trackMeta[track.id]) trackMeta[track.id] = {};
-    trackMeta[track.id].year = v;
+    const targets = selectedTrackIds.size > 0 ? [...selectedTrackIds] : [track.id];
+    targets.forEach(tid => {
+      if (!trackMeta[tid]) trackMeta[tid] = {};
+      trackMeta[tid].year = v;
+    });
     yearSuggest.textContent = '';
     saveData();
+    renderSongList();
   };
 
   document.getElementById('country-input').value = '';
@@ -1244,6 +1273,7 @@ function addCountry(trackId, country) {
     trackMeta[trackId].countries.push(country);
     saveData();
     renderCountryTagChips(trackId);
+    renderSongList();
     if (document.getElementById('country-filter-list').style.display !== 'none') renderCountryFilter();
   }
   document.getElementById('country-input').value = '';
@@ -1255,6 +1285,7 @@ function removeCountry(trackId, country) {
   trackMeta[trackId].countries = trackMeta[trackId].countries.filter(c => c !== country);
   saveData();
   renderCountryTagChips(trackId);
+  renderSongList();
   if (document.getElementById('country-filter-list').style.display !== 'none') renderCountryFilter();
 }
 
@@ -1276,6 +1307,28 @@ function renderCountryTagChips(trackId) {
     chip.append(label, del);
     container.insertBefore(chip, input);
   });
+}
+
+function bulkCountryTypeahead(input) {
+  const q = input.value;
+  if (!q) return;
+  const match = COUNTRIES.find(c => c.toLowerCase().startsWith(q.toLowerCase()));
+  if (!match) return;
+  const start = q.length;
+  input.value = match;
+  input.setSelectionRange(start, match.length);
+}
+
+function hideBulkCountryDropdown() {}
+
+function handleBulkCountryInput(e) {
+  if (e.key === 'Backspace' || e.key === 'Delete') return;
+  if (e.key !== 'Enter') return;
+  const input = document.getElementById('bulk-country');
+  const q = input.value.trim();
+  if (!q) return;
+  const match = COUNTRIES.find(c => c.toLowerCase() === q.toLowerCase());
+  if (match) applyBulkCountry(match);
 }
 
 function showCountryDropdown() {
@@ -1722,6 +1775,7 @@ async function exportFilteredPlaylist() {
   try {
     const me = await api('/me');
     if (!me) throw new Error('Could not fetch Spotify profile — try logging out and back in');
+    console.log('[export] me:', me.id, 'product:', me.product);
     const pl = await api(`/users/${me.id}/playlists`, 'POST', { name, description: 'Exported from objectsort', public: false });
     if (!pl || !pl.id) throw new Error('Playlist creation failed — Spotify returned no playlist ID');
     const uris = visible.map(t => `spotify:track:${t.id}`);
@@ -1951,6 +2005,21 @@ function initResizeHandles() {
   setupHandle(document.getElementById('handle-right'), () => rightPanel, -1);
 }
 
+function checkBackupReminder() {
+  const count = parseInt(localStorage.getItem('objectsort_session_count') || '0') + 1;
+  localStorage.setItem('objectsort_session_count', String(count));
+  const lastDismissed = parseInt(localStorage.getItem('objectsort_backup_dismissed') || '0');
+  const daysSince = (Date.now() - lastDismissed) / (1000 * 60 * 60 * 24);
+  if (count % 5 === 0 || daysSince > 7) {
+    document.getElementById('backup-banner').style.display = 'flex';
+  }
+}
+
+function dismissBackupBanner() {
+  localStorage.setItem('objectsort_backup_dismissed', String(Date.now()));
+  document.getElementById('backup-banner').style.display = 'none';
+}
+
 async function init() {
   const uriEl = document.getElementById('redirect-uri-display');
   if (uriEl) uriEl.textContent = location.origin + location.pathname;
@@ -1961,6 +2030,7 @@ async function init() {
     initResizeHandles();
     initFilterDragDrop();
     renderGenreTree(); renderParentSelect(); await loadTracks();
+    checkBackupReminder();
   }
 }
 
