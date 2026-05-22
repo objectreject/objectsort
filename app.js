@@ -442,7 +442,7 @@ function buildGenreNode(genre, searchQ = '', hideEmpty = false) {
     clearTimeout(clickTimer);
     const input = document.createElement('input');
     input.value = genre.name;
-    input.style.cssText = 'flex:1;background:#1a2236;border:1px solid #f59e0b;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
+    input.style.cssText = 'flex:1;background:#1a1a1a;border:1px solid #f59e0b;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
     name.replaceWith(input);
     input.focus(); input.select();
     const commit = () => {
@@ -610,7 +610,7 @@ function buildSongRow(t, idx) {
   const hasMetaLine = meta?.year || countries.length || meta?.energy;
   if (hasMetaLine) {
     const metaLine = document.createElement('div');
-    metaLine.style.cssText = 'font-size:0.63rem;color:#3a3a3a;margin-top:2px;display:flex;align-items:center;gap:4px;overflow:hidden';
+    metaLine.style.cssText = 'font-size:0.63rem;color:#444;margin-top:2px;display:flex;align-items:center;gap:4px;overflow:hidden';
     const metaParts = [];
     if (meta?.year) metaParts.push(meta.year);
     if (metaParts.length) {
@@ -628,7 +628,7 @@ function buildSongRow(t, idx) {
         const more = document.createElement('span');
         more.textContent = `+${countries.length - 1}`;
         more.title = countries.slice(1).join(', ');
-        more.style.cssText = 'font-size:0.58rem;color:#555;cursor:default;flex-shrink:0;border:1px solid #2d3d55;border-radius:4px;padding:0 3px';
+        more.style.cssText = 'font-size:0.58rem;color:#555;cursor:default;flex-shrink:0;border:1px solid #333;border-radius:4px;padding:0 3px';
         metaLine.appendChild(more);
       }
     }
@@ -737,7 +737,7 @@ function updateFlagBtn(trackId) {
   const isFlagged = flagged.has(trackId);
   btn.textContent = isFlagged ? '◆ Flagged' : '◆ Flag';
   btn.style.color = isFlagged ? '#e67e22' : '#555';
-  btn.style.borderColor = isFlagged ? '#e67e22' : '#1e3048';
+  btn.style.borderColor = isFlagged ? '#e67e22' : '#2a2a2a';
 }
 
 function toggleFlaggedFilter() {
@@ -792,7 +792,7 @@ function showBulkDropdown() {
   matches.forEach(g => {
     const item = document.createElement('div');
     item.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.6rem;cursor:pointer;font-size:0.8rem';
-    item.onmouseover = () => item.style.background = '#1a2236';
+    item.onmouseover = () => item.style.background = '#1a1a1a';
     item.onmouseout = () => item.style.background = '';
     const dot = document.createElement('span');
     dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${g.color};flex-shrink:0`;
@@ -995,7 +995,7 @@ function renderEnergySelector(trackId) {
 
   // Base track
   const track = document.createElement('div');
-  track.style.cssText = 'position:absolute;top:8px;left:0;right:0;height:1px;background:#1e3048';
+  track.style.cssText = 'position:absolute;top:8px;left:0;right:0;height:1px;background:#2a2a2a';
   container.appendChild(track);
 
   // Colored gradient fill from left up to selected dot
@@ -1015,10 +1015,10 @@ function renderEnergySelector(trackId) {
     const dot = document.createElement('div');
     dot.style.cssText = `position:absolute;top:3px;left:${pct}%;transform:translateX(-50%);
       width:11px;height:11px;border-radius:50%;z-index:1;cursor:pointer;transition:all 0.15s;
-      background:${isSelected ? color : '#1a2236'};border:1px solid ${isSelected ? color : '#2d3d55'}`;
+      background:${isSelected ? color : '#1a1a1a'};border:1px solid ${isSelected ? color : '#333'}`;
     dot.onclick = () => setEnergy(trackId, isSelected ? null : level);
-    dot.onmouseover = () => { if (!isSelected) { dot.style.background='#1e3048'; dot.style.borderColor='#444'; } };
-    dot.onmouseout = () => { if (!isSelected) { dot.style.background='#1a2236'; dot.style.borderColor='#2d3d55'; } };
+    dot.onmouseover = () => { if (!isSelected) { dot.style.background='#2a2a2a'; dot.style.borderColor='#444'; } };
+    dot.onmouseout = () => { if (!isSelected) { dot.style.background='#1a1a1a'; dot.style.borderColor='#333'; } };
     container.appendChild(dot);
 
     const lbl = document.createElement('div');
@@ -1087,7 +1087,7 @@ function showTagDropdown() {
     const tagged = songTags.includes(g.id);
     const item = document.createElement('div');
     item.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.6rem;cursor:pointer;font-size:0.8rem' + (tagged ? ';background:rgba(245,158,11,0.08)' : '');
-    item.onmouseover = () => item.style.background = tagged ? 'rgba(245,158,11,0.12)' : '#1a2236';
+    item.onmouseover = () => item.style.background = tagged ? 'rgba(245,158,11,0.12)' : '#1a1a1a';
     item.onmouseout = () => item.style.background = tagged ? 'rgba(245,158,11,0.08)' : '';
     const dot = document.createElement('span');
     dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${g.color};flex-shrink:0`;
@@ -1298,7 +1298,7 @@ function renderCountryTagChips(trackId) {
   const countries = trackMeta[trackId]?.countries || [];
   countries.forEach(c => {
     const chip = document.createElement('span');
-    chip.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;padding:2px 6px;background:#0d1117;border:1px solid #1e3048;border-radius:8px;color:#aaa;flex-shrink:0';
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;padding:2px 6px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#aaa;flex-shrink:0';
     const label = document.createElement('span'); label.textContent = c;
     const del = document.createElement('span');
     del.textContent = '×'; del.style.cssText = 'cursor:pointer;color:#555;line-height:1';
@@ -1344,7 +1344,7 @@ function showCountryDropdown() {
     const item = document.createElement('div');
     item.style.cssText = 'padding:0.32rem 0.6rem;font-size:0.8rem;cursor:pointer;color:#bbb';
     item.textContent = c;
-    item.onmouseover = () => item.style.background = '#1a2236';
+    item.onmouseover = () => item.style.background = '#1a1a1a';
     item.onmouseout = () => item.style.background = '';
     item.onmousedown = () => addCountry(selectedTrackId, c);
     dropdown.appendChild(item);
@@ -1413,7 +1413,7 @@ function renderSuggestions(spotifyGenres, trackId) {
   const list = document.getElementById('suggestions-list');
   list.innerHTML = '';
   if (!spotifyGenres || spotifyGenres.length === 0) {
-    list.innerHTML = '<div style="font-size:0.75rem;color:#3a3a3a;padding:0.2rem 0">No suggestions found</div>';
+    list.innerHTML = '<div style="font-size:0.75rem;color:#444;padding:0.2rem 0">No suggestions found</div>';
     return;
   }
   spotifyGenres.slice(0, 6).forEach(genre => list.appendChild(buildSuggestionItem(genre, trackId)));
@@ -1431,7 +1431,7 @@ function buildSuggestionItem(genre, trackId) {
 
   if (mapped === 'skip') {
     const s = document.createElement('div');
-    s.style.cssText = 'font-size:0.68rem;color:#333;margin-top:2px';
+    s.style.cssText = 'font-size:0.68rem;color:#444;margin-top:2px';
     s.textContent = 'skipped'; left.appendChild(s);
   }
 
@@ -1516,9 +1516,9 @@ function toggleMappingPicker(item, spotifyGenre, trackId, onPick) {
 
   const input = document.createElement('input');
   input.placeholder = 'New genre name...';
-  input.style.cssText = 'flex:1;background:#0d1117;border:1px solid #1e3048;border-radius:4px;padding:0.25rem 0.4rem;color:#eee;font-size:0.75rem;outline:none;min-width:0';
+  input.style.cssText = 'flex:1;background:#111;border:1px solid #2a2a2a;border-radius:4px;padding:0.25rem 0.4rem;color:#eee;font-size:0.75rem;outline:none;min-width:0';
   input.onfocus = () => input.style.borderColor = '#f59e0b';
-  input.onblur = () => input.style.borderColor = '#1e3048';
+  input.onblur = () => input.style.borderColor = '#2a2a2a';
 
   const addBtn = document.createElement('button');
   addBtn.textContent = '+';
@@ -1892,15 +1892,19 @@ function updateLibraryBar() {
   document.getElementById('lib-total').textContent = total > 0 ? total.toLocaleString() : '—';
   document.getElementById('lib-fill').style.width = total > 0 ? (loaded/total*100) + '%' : '0%';
   const statusEl = document.getElementById('load-status');
+  const libTrack = document.getElementById('lib-track');
   if (isLoading) {
     statusEl.textContent = 'fetching...';
     document.getElementById('lib-fill').classList.add('loading');
+    libTrack.style.opacity = '1';
   } else if (total > 0 && loaded >= total) {
     statusEl.textContent = '✓ complete';
     document.getElementById('lib-fill').classList.remove('loading');
+    setTimeout(() => { libTrack.style.transition = 'opacity 0.8s'; libTrack.style.opacity = '0'; }, 800);
   } else {
     statusEl.textContent = '';
     document.getElementById('lib-fill').classList.remove('loading');
+    libTrack.style.opacity = '1';
   }
 }
 
