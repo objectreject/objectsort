@@ -78,7 +78,7 @@ let reviewIndex = 0;
 const audio = document.getElementById('audio-player');
 
 const COLORS = [
-  '#64748b','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c',
+  '#1db954','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c',
   '#e67e22','#e91e8c','#00bcd4','#ff5722','#8bc34a','#607d8b',
   '#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#dda0dd',
   '#98d8c8','#f7dc6f','#bb8fce','#85c1e9','#f0b27a','#82e0aa',
@@ -442,7 +442,7 @@ function buildGenreNode(genre, searchQ = '', hideEmpty = false) {
     clearTimeout(clickTimer);
     const input = document.createElement('input');
     input.value = genre.name;
-    input.style.cssText = 'flex:1;background:#1a1a1a;border:1px solid #64748b;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
+    input.style.cssText = 'flex:1;background:#1a1a1a;border:1px solid #f59e0b;border-radius:4px;padding:1px 5px;color:#eee;font-size:0.78rem;font-family:inherit;outline:none;min-width:0';
     name.replaceWith(input);
     input.focus(); input.select();
     const commit = () => {
@@ -643,7 +643,7 @@ function buildSongRow(t, idx) {
     info.append(title, artist, tagsDiv);
   }
   const play = document.createElement('div'); play.className = 'song-play';
-  if (flagged.has(t.id)) { play.textContent = '◆'; play.style.color = '#e67e22'; play.style.fontSize = '0.45rem'; }
+  if (flagged.has(t.id)) { play.textContent = '◆'; play.style.color = '#a78bfa'; play.style.fontSize = '0.45rem'; }
   else if (isFullyTagged(t.id)) { play.textContent = '·'; play.style.color = 'rgba(245,158,11,0.6)'; }
   row.append(img, info, play);
   return row;
@@ -718,7 +718,7 @@ function toggleFlag(trackId) {
   if (row) {
     const dot = row.querySelector('.song-play');
     if (dot) {
-      if (flagged.has(trackId)) { dot.textContent = '◆'; dot.style.color = '#e67e22'; dot.style.fontSize = '0.45rem'; }
+      if (flagged.has(trackId)) { dot.textContent = '◆'; dot.style.color = '#a78bfa'; dot.style.fontSize = '0.45rem'; }
       else if (isFullyTagged(trackId)) { dot.textContent = '·'; dot.style.color = 'rgba(245,158,11,0.6)'; }
       else { dot.textContent = ''; }
     }
@@ -736,14 +736,14 @@ function updateFlagBtn(trackId) {
   if (!btn) return;
   const isFlagged = flagged.has(trackId);
   btn.textContent = isFlagged ? '◆ Flagged' : '◆ Flag';
-  btn.style.color = isFlagged ? '#e67e22' : '#555';
-  btn.style.borderColor = isFlagged ? '#e67e22' : '#2a2a2a';
+  btn.style.color = isFlagged ? '#a78bfa' : '#555';
+  btn.style.borderColor = isFlagged ? '#a78bfa' : '#2a2a2a';
 }
 
 function toggleFlaggedFilter() {
   showFlaggedOnly = !showFlaggedOnly;
-  document.getElementById('flagged-toggle').style.color = showFlaggedOnly ? '#e67e22' : '';
-  document.getElementById('flagged-toggle').style.borderColor = showFlaggedOnly ? '#e67e22' : '';
+  document.getElementById('flagged-toggle').style.color = showFlaggedOnly ? '#a78bfa' : '';
+  document.getElementById('flagged-toggle').style.borderColor = showFlaggedOnly ? '#a78bfa' : '';
   renderSongList();
 }
 
@@ -803,7 +803,7 @@ function showBulkDropdown() {
   });
   if (q && !matches.find(g => g.name.toLowerCase() === q)) {
     const create = document.createElement('div');
-    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#64748b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
+    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#f59e0b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
     create.textContent = `+ Create "${input.value.trim()}" and apply to all`;
     create.onmousedown = () => {
       const g = { id: Date.now().toString(), name: input.value.trim(), color: nextColor(), parentId: null };
@@ -1086,20 +1086,20 @@ function showTagDropdown() {
   matches.forEach(g => {
     const tagged = songTags.includes(g.id);
     const item = document.createElement('div');
-    item.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.6rem;cursor:pointer;font-size:0.8rem' + (tagged ? ';background:rgba(100,116,139,0.08)' : '');
-    item.onmouseover = () => item.style.background = tagged ? 'rgba(100,116,139,0.12)' : '#1a1a1a';
-    item.onmouseout = () => item.style.background = tagged ? 'rgba(100,116,139,0.08)' : '';
+    item.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.6rem;cursor:pointer;font-size:0.8rem' + (tagged ? ';background:rgba(245,158,11,0.08)' : '');
+    item.onmouseover = () => item.style.background = tagged ? 'rgba(245,158,11,0.12)' : '#1a1a1a';
+    item.onmouseout = () => item.style.background = tagged ? 'rgba(245,158,11,0.08)' : '';
     const dot = document.createElement('span');
     dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${g.color};flex-shrink:0`;
     const name = document.createElement('span'); name.textContent = g.name; name.style.flex = '1';
-    const check = document.createElement('span'); check.textContent = tagged ? '✓' : ''; check.style.color = '#64748b';
+    const check = document.createElement('span'); check.textContent = tagged ? '✓' : ''; check.style.color = '#f59e0b';
     item.append(dot, name, check);
     item.onmousedown = () => { if (selectedTrackIds.size > 0) applyBulkTag(g.id); else toggleTag(g.id); input.value = ''; hideTagDropdown(); };
     dropdown.appendChild(item);
   });
   if (!matches.find(g => g.name.toLowerCase() === q)) {
     const create = document.createElement('div');
-    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#64748b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
+    create.style.cssText = 'padding:0.35rem 0.6rem;font-size:0.78rem;color:#f59e0b;cursor:pointer' + (matches.length ? ';border-top:1px solid #222' : '');
     create.textContent = `+ Create "${input.value.trim()}"`;
     create.onmousedown = () => { createAndTagGenre(input.value.trim()); input.value = ''; hideTagDropdown(); };
     dropdown.appendChild(create);
@@ -1238,7 +1238,7 @@ function renderMeta(track) {
   yearInput.value = meta.year || '';
   yearInput.placeholder = '—';
   if (suggestedYear && !meta.year) {
-    yearSuggest.innerHTML = `Suggested: ${suggestedYear} · <span style="color:#64748b;cursor:pointer" onclick="acceptSuggestedYear('${track.id}','${suggestedYear}')">Accept</span>`;
+    yearSuggest.innerHTML = `Suggested: ${suggestedYear} · <span style="color:#f59e0b;cursor:pointer" onclick="acceptSuggestedYear('${track.id}','${suggestedYear}')">Accept</span>`;
   } else {
     yearSuggest.textContent = '';
   }
@@ -1517,12 +1517,12 @@ function toggleMappingPicker(item, spotifyGenre, trackId, onPick) {
   const input = document.createElement('input');
   input.placeholder = 'New genre name...';
   input.style.cssText = 'flex:1;background:#111;border:1px solid #2a2a2a;border-radius:4px;padding:0.25rem 0.4rem;color:#eee;font-size:0.75rem;outline:none;min-width:0';
-  input.onfocus = () => input.style.borderColor = '#64748b';
+  input.onfocus = () => input.style.borderColor = '#f59e0b';
   input.onblur = () => input.style.borderColor = '#2a2a2a';
 
   const addBtn = document.createElement('button');
   addBtn.textContent = '+';
-  addBtn.style.cssText = 'background:#64748b;color:#000;border:none;border-radius:4px;padding:0.25rem 0.5rem;font-size:0.78rem;font-weight:700;flex-shrink:0';
+  addBtn.style.cssText = 'background:#f59e0b;color:#000;border:none;border-radius:4px;padding:0.25rem 0.5rem;font-size:0.78rem;font-weight:700;flex-shrink:0';
 
   const createAndApply = () => {
     const name = input.value.trim();
@@ -1569,7 +1569,7 @@ function selectTrack(id) {
     span.onmouseover = () => span.style.color = '#bbb';
     span.onmouseout = () => span.style.color = '#888';
     span.onclick = () => navigator.clipboard.writeText(name).then(() => {
-      const orig = span.textContent; span.textContent = 'Copied!'; span.style.color = '#64748b';
+      const orig = span.textContent; span.textContent = 'Copied!'; span.style.color = '#f59e0b';
       setTimeout(() => { span.textContent = orig; span.style.color = '#888'; }, 1200);
     });
     artistEl.appendChild(span);
@@ -1837,7 +1837,7 @@ function restoreBackup(input) {
       saveData();
       renderGenreTree(); renderParentSelect(); renderSongList(); updateStats(); updateLibraryBar();
       statusEl.style.display = 'block';
-      statusEl.style.color = '#64748b';
+      statusEl.style.color = '#f59e0b';
       statusEl.textContent = `✓ Restored ${tracks.length.toLocaleString()} tracks and ${genres.length} genres`;
       setStatus('Backup restored successfully');
     } catch(err) {
@@ -1873,7 +1873,7 @@ function copyArtist(el) {
   navigator.clipboard.writeText(el.textContent).then(() => {
     const orig = el.textContent;
     el.textContent = 'Copied!';
-    el.style.color = '#64748b';
+    el.style.color = '#f59e0b';
     setTimeout(() => { el.textContent = orig; el.style.color = ''; }, 1200);
   });
 }
@@ -1886,25 +1886,104 @@ function setProgress(pct) {
   bar.style.opacity = pct > 0 && pct < 100 ? '1' : '0';
 }
 
+// ── STAT TICKER ──
+let _tickerTimer = null;
+let _tickerIdx = 0;
+
+function buildTickerFacts(totalHours) {
+  const h = totalHours;
+  const fmt = n => n >= 10 ? Math.round(n).toLocaleString() : n.toFixed(1).replace(/\.0$/, '');
+  const pct = n => (n * 100).toFixed(1) + '%';
+
+  const yr = new Date().getFullYear();
+  return [
+    `Logistics is a 2012 Swedish art film that documents, in real time, a pedometer making its journey from a store in Stockholm to a factory in China — played entirely in reverse. There is no dialogue. There are no characters. It runs 857 hours. Your library is ${pct(h / 857)} of the way through it.`,
+    `In 2001, a pipe organ in Halberstadt, Germany began performing a piece by John Cage designed to last 639 years. The next scheduled note change is in 2040. Everyone alive today who has heard it will be dead before it ends. By the time it finishes, your library will have played ${fmt((639 * 8760) / h)} times.`,
+    `The Mousetrap is Agatha Christie's murder mystery — it has been running continuously in London's West End since 1952, making it the longest-running stage production in history. The identity of the killer has been kept secret for over 70 years by a gentleman's agreement with the audience, who are asked at the end not to spoil it. Since opening night, your library would have played ${fmt(((yr - 1952) * 8760) / h)} times before tonight's curtain call.`,
+    `In 1927, a professor at the University of Queensland set up an experiment to demonstrate that tar pitch — which appears solid — is actually a liquid. Only 9 drops have fallen since. The experiment has outlived every scientist who ever worked on it. Your library plays ${fmt((10 * 8760) / h)} times while a single drop falls.`,
+    `In 2010, John Isner and Nicolas Mahut played the longest tennis match in recorded history across three days at Wimbledon. The final set alone lasted 8 hours and 11 minutes. Mahut lost — and then, the following morning, lost again in the first round of doubles. You could watch the entire match ${fmt(h / 11.08)} times.`,
+    `The Oxford Electric Bell has been ringing continuously since 1840 — making it one of the longest-running experiments in scientific history. It has rung an estimated 10 billion times. No one has ever opened it to see what's inside, because doing so would end the experiment. Nobody knows when the battery will die. Your library plays ${fmt(((yr - 1840) * 8760) / h)} times before the bell catches up to today.`,
+    `The Cure for Insomnia is a 1987 experimental film consisting entirely of a man named L.D. Groban reading his 4,080-page poem — accompanied by intermittent heavy metal. It was screened once, in full, at the Art Institute of Chicago. It is not available to stream. You could watch it ${fmt(h / 87)} times.`,
+    `Wagner's Ring Cycle is a series of four operas composed over 26 years, intended to be performed across four consecutive nights. Wagner also designed and built a dedicated theatre in Bayreuth, Germany specifically for its performance — it has been staging the cycle every summer since 1876. You could sit through ${fmt(h / 15)} complete cycles.`,
+    `In 1989, Ivan Nikolic and Goran Arsovic sat down for a chess match in Belgrade that lasted 20 hours and 15 minutes across 269 moves. The game was so long it required a rule change — the draw-by-repetition rule was introduced partly because of it. When it was over, they agreed to a draw. You could replay it ${fmt(h / 20.25)} times.`,
+    `Hiroo Onoda was a Japanese soldier stationed in the Philippine jungle during WWII. When the war ended in 1945, nobody told him. He kept fighting — conducting guerrilla operations and living off the land — until 1974, when his former commanding officer flew in personally to relieve him of duty. During those 29 years, your library would have played ${fmt((29 * 8760) / h)} times.`,
+    `Elaine Esposito fell into a coma during a routine appendix operation in 1941. She was six years old. She never woke up. She died 37 years and 111 days later — still unconscious, still breathing — setting a record that has never been broken. Your library would have played ${fmt(((37 + 111/365) * 8760) / h)} times.`,
+  ].sort(() => Math.random() - 0.5);
+}
+
+function startStatTicker() {
+  const totalMs = tracks.reduce((sum, t) => sum + (t.duration_ms || 0), 0);
+  if (totalMs === 0) return;
+  const totalHours = totalMs / 3600000;
+  const facts = buildTickerFacts(totalHours);
+  const ticker = document.getElementById('stat-ticker');
+  const track = document.getElementById('stat-ticker-track');
+  if (!ticker || !track) return;
+
+  ticker.style.display = 'block';
+  _tickerIdx = 0;
+
+  function showNext() {
+    const text = facts[_tickerIdx % facts.length];
+    _tickerIdx++;
+
+    // measure text width to set scroll duration proportionally
+    track.style.animation = 'none';
+    track.style.left = '100vw';
+    track.textContent = text;
+
+    // scroll speed: ~22px/s (deliberately slow)
+    const textWidth = track.scrollWidth;
+    const scrollDist = window.innerWidth + textWidth;
+    const duration = scrollDist / 22; // seconds
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        track.style.transition = `left ${duration}s linear`;
+        track.style.left = `-${textWidth + 40}px`;
+        // queue next fact after this one finishes + 0.8s pause
+        _tickerTimer = setTimeout(showNext, (duration + 0.8) * 1000);
+      });
+    });
+  }
+
+  showNext();
+}
+
+function stopStatTicker() {
+  clearTimeout(_tickerTimer);
+  const ticker = document.getElementById('stat-ticker');
+  if (ticker) ticker.style.display = 'none';
+}
+
 function updateLibraryBar() {
   const loaded = tracks.length, total = totalTracks || 0;
   document.getElementById('lib-loaded').textContent = loaded.toLocaleString();
   document.getElementById('lib-total').textContent = total > 0 ? total.toLocaleString() : '—';
   document.getElementById('lib-fill').style.width = total > 0 ? (loaded/total*100) + '%' : '0%';
   const statusEl = document.getElementById('load-status');
-  const libTrack = document.getElementById('lib-track');
+  const libBar = document.getElementById('library-bar');
   if (isLoading) {
     statusEl.textContent = 'fetching...';
     document.getElementById('lib-fill').classList.add('loading');
-    libTrack.style.opacity = '1';
+    libBar.style.opacity = '1';
+    libBar.style.maxHeight = '40px';
   } else if (total > 0 && loaded >= total) {
     statusEl.textContent = '✓ complete';
     document.getElementById('lib-fill').classList.remove('loading');
-    setTimeout(() => { libTrack.style.transition = 'opacity 0.8s'; libTrack.style.opacity = '0'; }, 800);
+    setTimeout(() => {
+      libBar.style.transition = 'opacity 0.6s, max-height 0.5s 0.4s, padding 0.5s 0.4s';
+      libBar.style.opacity = '0';
+      libBar.style.maxHeight = '0';
+      libBar.style.padding = '0';
+      libBar.style.borderBottom = 'none';
+      setTimeout(() => startStatTicker(), 600);
+    }, 1200);
   } else {
     statusEl.textContent = '';
     document.getElementById('lib-fill').classList.remove('loading');
-    libTrack.style.opacity = '1';
+    libBar.style.opacity = '1';
+    libBar.style.maxHeight = '40px';
   }
 }
 
