@@ -459,7 +459,23 @@ function buildGenreNode(genre, searchQ = '', hideEmpty = false) {
   };
   const cnt = document.createElement('span'); cnt.className = 'g-count'; cnt.textContent = getTrackCountForGenre(genre.id);
   const del = document.createElement('button'); del.className = 'g-del'; del.textContent = '✕';
-  del.onclick = e => { e.stopPropagation(); if (confirm(`Delete "${genre.name}"?`)) deleteGenre(genre.id); };
+  del.onclick = e => {
+    e.stopPropagation();
+    if (del.dataset.confirming === 'true') {
+      deleteGenre(genre.id);
+    } else {
+      del.textContent = '?';
+      del.style.color = '#e87';
+      del.dataset.confirming = 'true';
+      setTimeout(() => {
+        if (del.dataset.confirming === 'true') {
+          del.textContent = '✕';
+          del.style.color = '';
+          del.dataset.confirming = 'false';
+        }
+      }, 2500);
+    }
+  };
   row.append(caret, dot, name, cnt, del);
   wrap.appendChild(row);
   children.forEach(c => childWrap.appendChild(buildGenreNode(c, searchQ, hideEmpty)));
@@ -812,7 +828,7 @@ function toggleBulkSelect(trackId) {
   renderBulkBar();
   const row = document.querySelector(`#song-list .song-row[data-track-id="${trackId}"]`);
   if (row) row.classList.toggle('bulk-selected', selectedTrackIds.has(trackId));
-  if (selectedTrackIds.size > 0) showTagBubble();
+  if (selectedTrackIds.size > 0) showTagBubble(true);
   else hideTagBubble();
 }
 
@@ -934,6 +950,13 @@ function applyBulkCountry(country) {
 }
 
 // ── SIDEBAR FILTERS ──
+function toggleGenreSection() {
+  const body = document.getElementById('genre-section-body');
+  const caret = document.getElementById('genre-section-caret');
+  const collapsed = body.classList.toggle('collapsed');
+  caret.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+}
+
 function toggleFilterSection(type) {
   const list = document.getElementById(type + '-filter-list');
   const caret = document.getElementById(type + '-filter-caret');
@@ -1155,7 +1178,7 @@ function showTagDropdown() {
   dropdown.style.display = 'block';
 }
 
-function showTagBubble() {
+function showTagBubble(autoFocus = false) {
   if (!selectedTrackId && selectedTrackIds.size === 0) return;
   const bubble = document.getElementById('tag-bubble');
   if (bubble.style.display === 'block') return;
@@ -1163,9 +1186,7 @@ function showTagBubble() {
   bubble.classList.remove('visible');
   void bubble.offsetWidth;
   bubble.classList.add('visible');
-  setTimeout(() => {
-    document.getElementById('tag-input').focus();
-  }, 50);
+  if (autoFocus) setTimeout(() => document.getElementById('tag-input').focus(), 50);
 }
 
 function hideTagBubble() {
@@ -1600,6 +1621,14 @@ function selectTrack(id) {
   stopAudio();
   if (selectedTrackIds.size > 0) { selectedTrackIds.clear(); renderBulkBar(); }
   selectedTrackId = id;
+  // Reset remove button state on track switch
+  const removeBtn = document.getElementById('remove-track-btn');
+  if (removeBtn) {
+    removeBtn.textContent = '✕ Remove';
+    removeBtn.style.color = '#555';
+    removeBtn.style.borderColor = '#2a2a2a';
+    removeBtn.dataset.confirming = 'false';
+  }
   const t = tracks.find(x => x.id === id);
   if (!t) return;
 
@@ -1955,6 +1984,11 @@ function buildTickerFacts(totalHours) {
     `In 1989, Ivan Nikolic and Goran Arsovic sat down for a chess match in Belgrade that lasted 20 hours and 15 minutes across 269 moves. The game was so long it required a rule change — the draw-by-repetition rule was introduced partly because of it. When it was over, they agreed to a draw. You could listen to your entire library ${fmt(h / 20.25)} times in the time it took to play.`,
     `Hiroo Onoda was a Japanese soldier stationed in the Philippine jungle during WWII. When the war ended in 1945, nobody told him. He kept fighting — conducting guerrilla operations and living off the land — until 1974, when his former commanding officer flew in personally to relieve him of duty. During those 29 years, you could have listened to your entire library ${fmt((29 * 8760) / h)} times.`,
     `Elaine Esposito fell into a coma during a routine appendix operation in 1941. She was six years old. She never woke up. She died 37 years and 111 days later — still unconscious, still breathing — setting a record that has never been broken. You could have listened to your entire library ${fmt(((37 + 111/365) * 8760) / h)} times.`,
+    `Jonathan is a Seychelles giant tortoise currently living on the island of Saint Helena. He is estimated to have been born around 1832, making him approximately ${yr - 1832} years old — the oldest known living land animal on earth. A photograph taken in 1886 shows him already fully grown at his current size. He is now blind and has lost his sense of smell, but still responds to the sound of his keeper's voice at feeding time. You could listen to your entire library ${fmt(((yr - 1832) * 8760) / h)} times in the span of his life so far.`,
+    `Tsutomu Yamaguchi was in Hiroshima on August 6, 1945, for a business trip when the first atomic bomb dropped. He survived with burns, spent the night in the city, and returned home to Nagasaki the next morning. Three days later, the second bomb dropped. He survived that too, lived to 93, and spent the rest of his life as an anti-nuclear activist. Japan officially recognized him as a survivor of both bombings in 2009 — 64 years after the fact. You could have listened to your entire library ${fmt((64 * 8760) / h)} times before the paperwork went through.`,
+    `Henry Darger worked as a janitor and hospital porter in Chicago for most of his life. He ate alone, attended mass up to five times a day, and spoke to almost no one. When he moved to a nursing home in 1972, his landlord went to clean out his room and found a 15,145-page illustrated novel — the longest known work of fiction ever created — stacked in the corner. Darger never showed it to anyone. He died four months later. You could read it aloud continuously for ${fmt(15145 / 250 / h)} times the length of your library.`,
+    `The papal conclave of 1268 was called to elect a new pope after the death of Clement IV. The cardinals could not agree. After a year, the local government locked them in the palace. After two years, they reduced their food to bread and water. After two and a half years, they removed the roof. The cardinals elected Gregory X after 1,006 days — the longest papal vacancy in history — and then immediately wrote the rules that govern conclaves to this day. You could have listened to your entire library ${fmt((1006 * 24) / h)} times in the time it took them to decide.`,
+    `The Marathon monks of Mount Hiei undergo a practice called kaihōgyō — running the equivalent of a marathon every day for 100 consecutive days, repeated across seven years, totaling over 25,000 miles. That distance is roughly one full circumference of the earth. Since the practice was formalized in the 19th century, fewer than 50 men have ever completed it. You could listen to your entire library ${fmt((25000 / 60) / h)} times in the hours it would take to drive that same distance without stopping.`,
   ].sort(() => Math.random() - 0.5);
 }
 
@@ -1970,7 +2004,7 @@ function startStatTicker() {
   if (!ticker || !track) return;
 
   // All facts in one continuous crawl, separated by a spacer
-  track.textContent = facts.join('                    ※                    ');
+  track.textContent = facts.join('                                        ※                                        ');
   ticker.style.display = 'block';
 
   // Click anywhere on ticker to collapse/expand
@@ -1979,7 +2013,7 @@ function startStatTicker() {
   requestAnimationFrame(() => {
     const containerW = ticker.offsetWidth;
     const textW = track.scrollWidth;
-    const pxPerSec = 22; // glacial pace
+    const pxPerSec = 13; // glacial pace
     const durationMs = Math.round((containerW + textW) / pxPerSec * 1000);
 
     function scroll() {

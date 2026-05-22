@@ -54,19 +54,24 @@
   <div class="layout">
     <!-- GENRE SIDEBAR -->
     <div class="sidebar">
-      <div class="sidebar-head">
+      <div class="sidebar-head" onclick="toggleGenreSection()" style="cursor:pointer">
         <span>Genres</span>
-        <button id="reset-filter-btn" class="btn-outline btn-sm" onclick="showAllSongs()" style="font-size:0.68rem;display:none">Reset</button>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <button id="reset-filter-btn" class="btn-outline btn-sm" onclick="event.stopPropagation();showAllSongs()" style="font-size:0.68rem;display:none">Reset</button>
+          <span id="genre-section-caret" style="font-size:0.6rem;color:#555;transition:transform 0.2s">▾</span>
+        </div>
       </div>
-      <div style="padding:0.3rem 0.4rem 0;position:relative">
-        <input id="genre-search" type="text" placeholder="Filter genres..." autocomplete="off"
-          style="width:100%;box-sizing:border-box;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 1.4rem 0.3rem 0.5rem;color:#eee;font-size:0.75rem;outline:none;font-family:inherit"
-          onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#2a2a2a'"
-          oninput="renderGenreTree();document.getElementById('genre-search-clear').style.display=this.value?'block':'none'" />
-        <button id="genre-search-clear" onclick="document.getElementById('genre-search').value='';this.style.display='none';renderGenreTree()"
-          style="display:none;position:absolute;right:0.65rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#555;cursor:pointer;font-size:0.8rem;line-height:1;padding:0">✕</button>
+      <div id="genre-section-body">
+        <div style="padding:0.3rem 0.4rem 0;position:relative">
+          <input id="genre-search" type="text" placeholder="Filter genres..." autocomplete="off"
+            style="width:100%;box-sizing:border-box;background:#111;border:1px solid #2a2a2a;border-radius:5px;padding:0.3rem 1.4rem 0.3rem 0.5rem;color:#eee;font-size:0.75rem;outline:none;font-family:inherit"
+            onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#2a2a2a'"
+            oninput="renderGenreTree();document.getElementById('genre-search-clear').style.display=this.value?'block':'none'" />
+          <button id="genre-search-clear" onclick="document.getElementById('genre-search').value='';this.style.display='none';renderGenreTree()"
+            style="display:none;position:absolute;right:0.65rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#555;cursor:pointer;font-size:0.8rem;line-height:1;padding:0">✕</button>
+        </div>
+        <div class="genre-list" id="genre-list"></div>
       </div>
-      <div class="genre-list" id="genre-list"></div>
       <div id="filter-sections">
       <div class="filter-section" data-section="year" draggable="true">
         <div class="filter-head" onclick="toggleFilterSection('year')">
