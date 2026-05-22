@@ -60,10 +60,10 @@ const ENERGY_COLORS  = { 'high':'#e74c3c', 'medium-high':'#e67e22', 'medium':'#2
 let selectedTrackId = null;
 let selectedTrackIds = new Set();
 let selectedGenreFilter = new Set();
-let selectedYearFilter = null;
-let selectedCountryFilter = null;
-let selectedRegionFilter = null;
-let selectedEnergyFilter = null;
+let selectedYearFilter = new Set();
+let selectedCountryFilter = new Set();
+let selectedRegionFilter = new Set();
+let selectedEnergyFilter = new Set();
 let countryDropdownContinent = null;
 let yearBucketSize = 5;
 const YEAR_BUCKET_SIZES = [1, 5, 10, 25];
@@ -377,16 +377,25 @@ function renderGenreTree() {
   const list = document.getElementById('genre-list');
   list.innerHTML = '';
   const q = (document.getElementById('genre-search')?.value || '').toLowerCase().trim();
+  const hideEmpty = _hasNonGenreFilter();
   const matchesSearch = g => !q || g.name.toLowerCase().includes(q) ||
     genres.filter(c => c.parentId === g.id).some(c => c.name.toLowerCase().includes(q));
-  genres.filter(g => !g.parentId && matchesSearch(g))
+  const visibleRoot = genres.filter(g => !g.parentId && matchesSearch(g) && (!hideEmpty || _hasMatchingDescendant(g.id)));
+  visibleRoot
     .sort((a, b) => getTrackCountForGenre(b.id) - getTrackCountForGenre(a.id))
-    .forEach(g => list.appendChild(buildGenreNode(g, q)));
+    .forEach(g => list.appendChild(buildGenreNode(g, q, hideEmpty)));
   updateStats();
 }
 
-function buildGenreNode(genre, searchQ = '') {
-  const children = genres.filter(g => g.parentId === genre.id);
+function _hasMatchingDescendant(gid) {
+  if (getTrackCountForGenre(gid) > 0) return true;
+  return genres.filter(g => g.parentId === gid).some(c => _hasMatchingDescendant(c.id));
+}
+
+function buildGenreNode(genre, searchQ = '', hideEmpty = false) {
+  const children = genres.filter(g => g.parentId === genre.id)
+    .filter(c => !hideEmpty || _hasMatchingDescendant(c.id))
+    .sort((a, b) => getTrackCountForGenre(b.id) - getTrackCountForGenre(a.id));
   const wrap = document.createElement('div'); wrap.className = 'g-item';
   const row = document.createElement('div');
   row.className = 'g-row' + (selectedGenreFilter.has(genre.id) ? ' selected' : '');
@@ -432,16 +441,62 @@ function buildGenreNode(genre, searchQ = '') {
   del.onclick = e => { e.stopPropagation(); if (confirm(`Delete "${genre.name}"?`)) deleteGenre(genre.id); };
   row.append(caret, dot, name, cnt, del);
   wrap.appendChild(row);
-  children.forEach(c => childWrap.appendChild(buildGenreNode(c, searchQ)));
+  children.forEach(c => childWrap.appendChild(buildGenreNode(c, searchQ, hideEmpty)));
   wrap.appendChild(childWrap);
   return wrap;
+}
+
+function _hasNonGenreFilter() {
+  return selectedYearFilter.size > 0 || selectedCountryFilter.size > 0
+    || selectedRegionFilter.size > 0 || selectedEnergyFilter.size > 0
+    || showFlaggedOnly
+    || [...incompleteFields].some(f => f !== 'genre')
+    || !!(document.getElementById('search-input')?.value || '').trim();
+}
+
+function _tracksMatchingNonGenreFilters() {
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const incompleteArr = [...incompleteFields].filter(f => f !== 'genre');
+  return tracks.filter(t => {
+    if (showFlaggedOnly && !flagged.has(t.id)) return false;
+    if (incompleteArr.length > 0) {
+      const isMissing = incompleteArr.some(f => {
+        if (f === 'year') return !trackMeta[t.id]?.year;
+        if (f === 'country') return !(trackMeta[t.id]?.countries?.length);
+        if (f === 'energy') return !trackMeta[t.id]?.energy;
+      });
+      if (!isMissing) return false;
+    }
+    if (selectedYearFilter.size > 0) {
+      const raw = trackMeta[t.id]?.year || (t.releaseDate ? t.releaseDate.slice(0,4) : null);
+      const y = raw ? parseInt(raw) : null;
+      if (!y) return false;
+      const inRange = [...selectedYearFilter].some(key => {
+        const [s, e] = key.split('-').map(Number);
+        return y >= s && y <= e;
+      });
+      if (!inRange) return false;
+    }
+    if (selectedCountryFilter.size > 0) {
+      const cs = trackMeta[t.id]?.countries || [];
+      if (![...selectedCountryFilter].some(c => cs.includes(c))) return false;
+    }
+    if (selectedRegionFilter.size > 0) {
+      const cs = trackMeta[t.id]?.countries || [];
+      if (!cs.some(c => selectedRegionFilter.has(CONTINENT_MAP[c]))) return false;
+    }
+    if (selectedEnergyFilter.size > 0 && !selectedEnergyFilter.has(trackMeta[t.id]?.energy)) return false;
+    if (q && !t.title.toLowerCase().includes(q) && !t.artist.toLowerCase().includes(q)) return false;
+    return true;
+  });
 }
 
 let _genreCountsCache = null;
 function _buildGenreCounts() {
   const c = {};
   genres.forEach(g => c[g.id] = 0);
-  Object.values(tags).forEach(gids => gids.forEach(gid => { if (c[gid] !== undefined) c[gid]++; }));
+  const source = _hasNonGenreFilter() ? _tracksMatchingNonGenreFilters() : tracks;
+  source.forEach(t => (tags[t.id] || []).forEach(gid => { if (c[gid] !== undefined) c[gid]++; }));
   return c;
 }
 function getGenreCounts() {
@@ -484,21 +539,25 @@ function getVisibleTracks() {
       if (!isMissingSelected) return false;
     }
     if (genreFilterArr.length > 0 && !genreFilterArr.every(gid => (tags[t.id]||[]).includes(gid))) return false;
-    if (selectedYearFilter) {
-      const [startStr, endStr] = selectedYearFilter.split('-');
-      const start = parseInt(startStr), end = parseInt(endStr);
+    if (selectedYearFilter.size > 0) {
       const rawYear = trackMeta[t.id]?.year || (t.releaseDate ? t.releaseDate.slice(0,4) : null);
       const year = rawYear ? parseInt(rawYear) : null;
-      if (!year || year < start || year > end) return false;
+      if (!year) return false;
+      const inRange = [...selectedYearFilter].some(key => {
+        const [s, e] = key.split('-').map(Number);
+        return year >= s && year <= e;
+      });
+      if (!inRange) return false;
     }
-    if (selectedCountryFilter) {
-      if (!(trackMeta[t.id]?.countries || []).includes(selectedCountryFilter)) return false;
+    if (selectedCountryFilter.size > 0) {
+      const tc = trackMeta[t.id]?.countries || [];
+      if (![...selectedCountryFilter].some(c => tc.includes(c))) return false;
     }
-    if (selectedRegionFilter) {
+    if (selectedRegionFilter.size > 0) {
       const tCountries = trackMeta[t.id]?.countries || [];
-      if (!tCountries.some(c => CONTINENT_MAP[c] === selectedRegionFilter)) return false;
+      if (!tCountries.some(c => selectedRegionFilter.has(CONTINENT_MAP[c]))) return false;
     }
-    if (selectedEnergyFilter && trackMeta[t.id]?.energy !== selectedEnergyFilter) return false;
+    if (selectedEnergyFilter.size > 0 && !selectedEnergyFilter.has(trackMeta[t.id]?.energy)) return false;
     if (q && !t.title.toLowerCase().includes(q) && !t.artist.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -567,7 +626,7 @@ function buildSongRow(t, idx) {
     info.append(title, artist, tagsDiv);
   }
   const play = document.createElement('div'); play.className = 'song-play';
-  if (flagged.has(t.id)) { play.textContent = '◆'; play.style.color = '#e67e22'; play.style.fontSize = '0.55rem'; }
+  if (flagged.has(t.id)) { play.textContent = '◆'; play.style.color = '#e67e22'; play.style.fontSize = '0.45rem'; }
   else if (isFullyTagged(t.id)) { play.textContent = '·'; play.style.color = 'rgba(29,185,84,0.6)'; }
   row.append(img, info, play);
   return row;
@@ -604,6 +663,8 @@ function renderOpenFilters() {
 
 function renderSongList() {
   invalidateVisibleTracks();
+  invalidateGenreCounts();
+  renderGenreTree();
   renderOpenFilters();
   const list = document.getElementById('song-list');
   if (isLoading && tracks.length === 0) {
@@ -640,7 +701,7 @@ function toggleFlag(trackId) {
   if (row) {
     const dot = row.querySelector('.song-play');
     if (dot) {
-      if (flagged.has(trackId)) { dot.textContent = '◆'; dot.style.color = '#e67e22'; dot.style.fontSize = '0.55rem'; }
+      if (flagged.has(trackId)) { dot.textContent = '◆'; dot.style.color = '#e67e22'; dot.style.fontSize = '0.45rem'; }
       else if (isFullyTagged(trackId)) { dot.textContent = '·'; dot.style.color = 'rgba(29,185,84,0.6)'; }
       else { dot.textContent = ''; }
     }
@@ -818,7 +879,7 @@ function toggleFilterSection(type) {
 function cycleYearBucket() {
   const idx = YEAR_BUCKET_SIZES.indexOf(yearBucketSize);
   yearBucketSize = YEAR_BUCKET_SIZES[(idx + 1) % YEAR_BUCKET_SIZES.length];
-  selectedYearFilter = null;
+  selectedYearFilter = new Set();
   document.getElementById('year-bucket-btn').textContent = yearBucketSize === 1 ? '1yr' : `${yearBucketSize}yr`;
   renderSongList(); renderYearFilter();
 }
@@ -846,11 +907,11 @@ function renderYearFilter() {
     const chip = document.createElement('span');
     const [s, e] = key.split('-');
     const label = yearBucketSize === 1 ? s : `${s}–${e.slice(-2)}`;
-    chip.className = 'filter-chip' + (selectedYearFilter === key ? ' active' : '');
+    chip.className = 'filter-chip' + (selectedYearFilter.has(key) ? ' active' : '');
     const countEl = document.createElement('span'); countEl.className = 'chip-count'; countEl.textContent = buckets.get(key);
     chip.append(document.createTextNode(label), countEl);
     chip.onclick = () => {
-      selectedYearFilter = selectedYearFilter === key ? null : key;
+      if (selectedYearFilter.has(key)) selectedYearFilter.delete(key); else selectedYearFilter.add(key);
       updateResetBtn(); renderSongList(); renderYearFilter();
     };
     list.appendChild(chip);
@@ -866,11 +927,11 @@ function renderCountryFilter() {
   countries.forEach(c => {
     const count = countMap[c];
     const chip = document.createElement('span');
-    chip.className = 'filter-chip' + (selectedCountryFilter === c ? ' active' : '');
+    chip.className = 'filter-chip' + (selectedCountryFilter.has(c) ? ' active' : '');
     const countEl = document.createElement('span'); countEl.className = 'chip-count'; countEl.textContent = count;
     chip.append(document.createTextNode(c), countEl);
     chip.onclick = () => {
-      selectedCountryFilter = selectedCountryFilter === c ? null : c;
+      if (selectedCountryFilter.has(c)) selectedCountryFilter.delete(c); else selectedCountryFilter.add(c);
       updateResetBtn(); renderSongList(); renderCountryFilter();
     };
     list.appendChild(chip);
@@ -894,11 +955,11 @@ function renderRegionFilter() {
   }
   [...continentCounts.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c).forEach(continent => {
     const chip = document.createElement('span');
-    chip.className = 'filter-chip' + (selectedRegionFilter === continent ? ' active' : '');
+    chip.className = 'filter-chip' + (selectedRegionFilter.has(continent) ? ' active' : '');
     const countEl = document.createElement('span'); countEl.className = 'chip-count'; countEl.textContent = continentCounts.get(continent);
     chip.append(document.createTextNode(continent), countEl);
     chip.onclick = () => {
-      selectedRegionFilter = selectedRegionFilter === continent ? null : continent;
+      if (selectedRegionFilter.has(continent)) selectedRegionFilter.delete(continent); else selectedRegionFilter.add(continent);
       updateResetBtn(); renderSongList(); renderRegionFilter();
     };
     list.appendChild(chip);
@@ -970,13 +1031,16 @@ function renderEnergyFilter() {
     if (!count) return;
     hasAny = true;
     const chip = document.createElement('span');
-    chip.className = 'filter-chip' + (selectedEnergyFilter === level ? ' active' : '');
+    chip.className = 'filter-chip' + (selectedEnergyFilter.has(level) ? ' active' : '');
+    const left = document.createElement('span');
+    left.style.cssText = 'display:flex;align-items:center;gap:4px';
     const dot = document.createElement('span');
-    dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${ENERGY_COLORS[level]};flex-shrink:0;display:inline-block;margin-right:4px`;
+    dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${ENERGY_COLORS[level]};flex-shrink:0;display:inline-block`;
+    left.append(dot, document.createTextNode(ENERGY_LABELS[level]));
     const countEl = document.createElement('span'); countEl.className = 'chip-count'; countEl.textContent = count;
-    chip.append(dot, document.createTextNode(ENERGY_LABELS[level]), countEl);
+    chip.append(left, countEl);
     chip.onclick = () => {
-      selectedEnergyFilter = selectedEnergyFilter === level ? null : level;
+      if (selectedEnergyFilter.has(level)) selectedEnergyFilter.delete(level); else selectedEnergyFilter.add(level);
       updateResetBtn(); renderSongList(); renderEnergyFilter();
     };
     list.appendChild(chip);
@@ -1120,7 +1184,7 @@ function filterByGenre(gid) {
 
 function showAllSongs() {
   selectedGenreFilter = new Set(); incompleteFields = new Set();
-  selectedYearFilter = null; selectedCountryFilter = null; selectedRegionFilter = null; selectedEnergyFilter = null;
+  selectedYearFilter = new Set(); selectedCountryFilter = new Set(); selectedRegionFilter = new Set(); selectedEnergyFilter = new Set();
   document.getElementById('incomplete-toggle').classList.remove('active');
   document.querySelectorAll('.incomplete-pill').forEach(p => p.classList.remove('active'));
   document.getElementById('reset-filter-btn').style.display = 'none';
@@ -1133,7 +1197,7 @@ function showAllSongs() {
 }
 
 function updateResetBtn() {
-  const visible = selectedGenreFilter.size > 0 || incompleteFields.size > 0 || selectedYearFilter || selectedCountryFilter || selectedRegionFilter || selectedEnergyFilter;
+  const visible = selectedGenreFilter.size > 0 || incompleteFields.size > 0 || selectedYearFilter.size > 0 || selectedCountryFilter.size > 0 || selectedRegionFilter.size > 0 || selectedEnergyFilter.size > 0;
   document.getElementById('reset-filter-btn').style.display = visible ? 'block' : 'none';
   document.getElementById('export-filter-top-btn').style.display = visible ? 'block' : 'none';
 }
@@ -1644,10 +1708,10 @@ async function exportFilteredPlaylist() {
   const parts = [];
   if (selectedGenreFilter.size > 0)
     [...selectedGenreFilter].forEach(gid => { const g = getGenre(gid); if (g) parts.push(g.name); });
-  if (selectedYearFilter) parts.push(selectedYearFilter);
-  if (selectedCountryFilter) parts.push(selectedCountryFilter);
-  if (selectedRegionFilter) parts.push(selectedRegionFilter);
-  if (selectedEnergyFilter) parts.push(ENERGY_LABELS[selectedEnergyFilter]);
+  if (selectedYearFilter.size > 0) parts.push([...selectedYearFilter].join('/'));
+  if (selectedCountryFilter.size > 0) parts.push([...selectedCountryFilter].join('/'));
+  if (selectedRegionFilter.size > 0) parts.push([...selectedRegionFilter].join('/'));
+  if (selectedEnergyFilter.size > 0) parts.push([...selectedEnergyFilter].map(l => ENERGY_LABELS[l]).join('/'));
   if (incompleteFields.size > 0) parts.push('Missing ' + [...incompleteFields].join('+'));
   const q = document.getElementById('search-input').value.trim();
   if (q) parts.push(`"${q}"`);
@@ -1665,6 +1729,7 @@ async function exportFilteredPlaylist() {
       await api(`/playlists/${pl.id}/tracks`, 'POST', { uris: uris.slice(i, i + 100) });
     setStatus(`✓ "${name}" created with ${visible.length} tracks`);
   } catch(e) {
+    console.error('[export] failed:', e);
     setStatus('Export failed: ' + e.message);
   }
   _isExporting = false;
