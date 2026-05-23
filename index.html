@@ -156,11 +156,15 @@
           <div class="detail-title" id="detail-title"></div>
           <div id="detail-artist" class="detail-artist" style="display:flex;flex-wrap:wrap;gap:0.25rem;align-items:center"></div>
           <div class="detail-links">
+            <a id="rym-btn" class="detail-link" href="#" target="_blank">rateyourmusic ↗</a>
             <a id="discogs-btn" class="detail-link" href="#" target="_blank">discogs ↗</a>
-            <a id="mb-btn" class="detail-link" href="#" target="_blank">musicbrainz ↗</a>
             <a id="everynoise-btn" class="detail-link" href="https://everynoise.com" target="_blank">everynoise ↗</a>
           </div>
-          <div class="section-label" style="margin-top:0.5rem">Your Tags</div>
+          <div class="section-label" style="margin-top:0.5rem;display:flex;align-items:center;justify-content:space-between">
+            <span>Your Tags</span>
+            <span id="copy-tags-btn" onclick="copyTagsFromSelected()" title="Copy tags (paste with ⌘V)"
+              style="font-size:0.65rem;color:#333;cursor:pointer;opacity:0;transition:opacity 0.15s;user-select:none">copy</span>
+          </div>
           <div class="current-tags" id="current-tags" style="margin-bottom:1.2rem"></div>
 
           <div class="audio-bar">

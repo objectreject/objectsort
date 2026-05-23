@@ -1,4 +1,5 @@
 // ── STATE ──
+const LASTFM_API_KEY = 'd76a3e138b7658d964689fd90d52f86d';
 let CLIENT_ID = '';
 let ACCESS_TOKEN = '';
 let tracks = [];
@@ -56,7 +57,7 @@ const CONTINENTS = ['Africa','Asia','Europe','North America','Oceania','South Am
 
 const ENERGY_LEVELS = ['high','medium-high','medium','medium-low','low'];
 const ENERGY_LABELS  = { 'high':'High', 'medium-high':'Med-High', 'medium':'Medium', 'medium-low':'Med-Low', 'low':'Low' };
-const ENERGY_COLORS  = { 'high':'#e74c3c', 'medium-high':'#e67e22', 'medium':'#2ecc71', 'medium-low':'#3498db', 'low':'#9b59b6' };
+const ENERGY_COLORS  = { 'high':'#ff4757', 'medium-high':'#e67e22', 'medium':'#2ecc71', 'medium-low':'#3498db', 'low':'#9b59b6' };
 
 let selectedTrackId = null;
 let selectedTrackIds = new Set();
@@ -1438,17 +1439,14 @@ function handleCountryInput(e) {
 }
 
 // ── SUGGESTIONS ──
-async function fetchMusicBrainzGenres(artistName) {
-  const cacheKey = 'mb:' + artistName;
+async function fetchLastFmGenres(artistName) {
+  const cacheKey = 'lfm:' + artistName;
   if (artistGenreCache[cacheKey] !== undefined) return artistGenreCache[cacheKey];
   try {
-    const query = encodeURIComponent(`artist:"${artistName}"`);
-    const res = await fetch(`https://musicbrainz.org/ws/2/artist/?query=${query}&fmt=json&limit=5`, {
-      headers: { 'Accept': 'application/json', 'User-Agent': 'objectsort/1.0 (music tagging tool)' }
-    });
+    const url = `https://ws.audioscrobbler.com/2.0/?method=artist.getTopTags&artist=${encodeURIComponent(artistName)}&api_key=${LASTFM_API_KEY}&format=json`;
+    const res = await fetch(url);
     const data = await res.json();
-    const best = data.artists?.[0];
-    const tags = (best?.tags || []).filter(t => t.count > 0).sort((a,b) => b.count - a.count).slice(0, 12).map(t => t.name);
+    const tags = (data.toptags?.tag || []).filter(t => parseInt(t.count) > 0).slice(0, 12).map(t => t.name.toLowerCase());
     artistGenreCache[cacheKey] = tags;
     return tags;
   } catch(e) { artistGenreCache[cacheKey] = []; return []; }
@@ -1469,10 +1467,10 @@ async function fetchArtistGenres(track) {
     artistGenreCache[id].forEach(g => allGenres.add(g));
   }
 
-  // MusicBrainz tags — always fetch, merged with Spotify
+  // Last.fm tags — merged with Spotify
   const primaryArtist = track.artist.split(',')[0].trim();
-  const mbGenres = await fetchMusicBrainzGenres(primaryArtist);
-  mbGenres.forEach(g => allGenres.add(g));
+  const lfmGenres = await fetchLastFmGenres(primaryArtist);
+  lfmGenres.forEach(g => allGenres.add(g));
 
   return [...allGenres];
 }
@@ -1659,8 +1657,8 @@ function selectTrack(id) {
   const primaryArtist = t.artist.split(',')[0].trim();
   document.getElementById('discogs-btn').href =
     'https://www.discogs.com/search/?q=' + encodeURIComponent(t.artist + ' ' + t.title);
-  document.getElementById('mb-btn').href =
-    'https://musicbrainz.org/search?query=' + encodeURIComponent(primaryArtist) + '&type=artist';
+  document.getElementById('rym-btn').href =
+    'https://rateyourmusic.com/search?searchterm=' + encodeURIComponent(primaryArtist) + '&searchtype=a';
   document.getElementById('spotify-play-btn').href = 'spotify:track:' + t.id;
 
   const audioBar = document.querySelector('.audio-bar');
@@ -2041,6 +2039,32 @@ function updateLibraryBar() {
   // Library bar removed from HTML — this is now a no-op kept for call-site compatibility
 }
 
+// ── TAG COPY / PASTE ──
+let _copiedTags = null;
+
+function copyTagsFromSelected() {
+  if (!selectedTrackId) return;
+  const songTags = tags[selectedTrackId];
+  if (!songTags || songTags.length === 0) return;
+  _copiedTags = [...songTags];
+  const btn = document.getElementById('copy-tags-btn');
+  if (btn) {
+    btn.textContent = 'copied!';
+    btn.style.color = '#f59e0b';
+    setTimeout(() => { btn.textContent = 'copy'; btn.style.color = '#333'; }, 1500);
+  }
+}
+
+function pasteTagsToSelected() {
+  if (!selectedTrackId || !_copiedTags || _copiedTags.length === 0) return;
+  if (!tags[selectedTrackId]) tags[selectedTrackId] = [];
+  let added = 0;
+  _copiedTags.forEach(gid => {
+    if (!tags[selectedTrackId].includes(gid)) { tags[selectedTrackId].push(gid); added++; }
+  });
+  if (added > 0) { saveData(); renderCurrentTags(); renderGenreTree(); renderSongList(); updateStats(); }
+}
+
 // ── KEYBOARD NAV ──
 document.addEventListener('click', e => {
   const dd = document.getElementById('incomplete-dropdown');
@@ -2051,6 +2075,7 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   const tag = document.activeElement.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if ((e.metaKey || e.ctrlKey) && e.key === 'v') { e.preventDefault(); pasteTagsToSelected(); return; }
   if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
   e.preventDefault();
   const visible = getVisibleTracks();
