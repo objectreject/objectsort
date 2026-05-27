@@ -664,7 +664,7 @@ function buildSongRow(t, idx) {
     info.append(title, artist, tagsDiv);
   }
   const play = document.createElement('div'); play.className = 'song-play';
-  if (flagged.has(t.id)) { play.textContent = '◆'; play.style.color = '#a78bfa'; play.style.fontSize = '0.45rem'; }
+  if (flagged.has(t.id)) { play.textContent = '⍟'; play.style.color = '#ff2d78'; play.style.fontSize = '0.45rem'; }
   else if (isFullyTagged(t.id)) { play.textContent = '·'; play.style.color = 'rgba(245,158,11,0.6)'; }
   row.append(img, info, play);
   return row;
@@ -739,7 +739,7 @@ function toggleFlag(trackId) {
   if (row) {
     const dot = row.querySelector('.song-play');
     if (dot) {
-      if (flagged.has(trackId)) { dot.textContent = '◆'; dot.style.color = '#a78bfa'; dot.style.fontSize = '0.45rem'; }
+      if (flagged.has(trackId)) { dot.textContent = '⍟'; dot.style.color = '#ff2d78'; dot.style.fontSize = '0.45rem'; }
       else if (isFullyTagged(trackId)) { dot.textContent = '·'; dot.style.color = 'rgba(245,158,11,0.6)'; }
       else { dot.textContent = ''; }
     }
@@ -800,15 +800,15 @@ function updateFlagBtn(trackId) {
   const btn = document.getElementById('flag-btn');
   if (!btn) return;
   const isFlagged = flagged.has(trackId);
-  btn.textContent = isFlagged ? '◆ Flagged' : '◆ Flag';
-  btn.style.color = isFlagged ? '#a78bfa' : '#555';
-  btn.style.borderColor = isFlagged ? '#a78bfa' : '#2a2a2a';
+  btn.textContent = isFlagged ? '⍟ Flagged' : '⍟ Flag';
+  btn.style.color = isFlagged ? '#ff2d78' : '#555';
+  btn.style.borderColor = isFlagged ? '#ff2d78' : '#2a2a2a';
 }
 
 function toggleFlaggedFilter() {
   showFlaggedOnly = !showFlaggedOnly;
-  document.getElementById('flagged-toggle').style.color = showFlaggedOnly ? '#a78bfa' : '';
-  document.getElementById('flagged-toggle').style.borderColor = showFlaggedOnly ? '#a78bfa' : '';
+  document.getElementById('flagged-toggle').style.color = showFlaggedOnly ? '#ff2d78' : '';
+  document.getElementById('flagged-toggle').style.borderColor = showFlaggedOnly ? '#ff2d78' : '';
   renderSongList();
 }
 
