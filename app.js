@@ -189,6 +189,7 @@ async function exchangeCode(code) {
     body: new URLSearchParams({ client_id: CLIENT_ID, grant_type: 'authorization_code', code, redirect_uri: redirectUri, code_verifier: verifier })
   });
   const data = await res.json();
+  console.log('[auth] granted scopes:', data.scope);
   if (data.access_token) {
     ACCESS_TOKEN = data.access_token;
     localStorage.setItem('objectsort_token', ACCESS_TOKEN);
