@@ -1853,7 +1853,7 @@ async function exportFilteredPlaylist() {
     const me = await api('/me');
     if (!me) throw new Error('Could not fetch Spotify profile — try logging out and back in');
     console.log('[export] me:', me.id, 'product:', me.product);
-    const pl = await api(`/me/playlists`, 'POST', { name, description: 'Exported from objectsort', public: false });
+    const pl = await api(`/me/playlists`, 'POST', { name, description: 'Exported from objectsort', public: true });
     if (!pl || !pl.id) throw new Error('Playlist creation failed — Spotify returned no playlist ID');
     await new Promise(r => setTimeout(r, 1500));
     const uris = visible.map(t => `spotify:track:${t.id}`);
