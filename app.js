@@ -1817,6 +1817,7 @@ async function exportPlaylist(gid) {
   try {
     const me = await api('/me');
     const pl = await api(`/me/playlists`, 'POST', { name: `objectsort: ${getGenrePath(gid)}`, description: 'Created by objectsort', public: false });
+    await new Promise(r => setTimeout(r, 1500));
     for (let i = 0; i < trackIds.length; i += 100)
       await api(`/playlists/${pl.id}/tracks`, 'POST', { uris: trackIds.slice(i,i+100).map(id=>`spotify:track:${id}`) });
     setStatus(`✓ "${g.name}" created with ${trackIds.length} songs`);
@@ -1854,6 +1855,7 @@ async function exportFilteredPlaylist() {
     console.log('[export] me:', me.id, 'product:', me.product);
     const pl = await api(`/me/playlists`, 'POST', { name, description: 'Exported from objectsort', public: false });
     if (!pl || !pl.id) throw new Error('Playlist creation failed — Spotify returned no playlist ID');
+    await new Promise(r => setTimeout(r, 1500));
     const uris = visible.map(t => `spotify:track:${t.id}`);
     for (let i = 0; i < uris.length; i += 100)
       await api(`/playlists/${pl.id}/tracks`, 'POST', { uris: uris.slice(i, i + 100) });
