@@ -1856,9 +1856,19 @@ async function exportFilteredPlaylist() {
     const pl = await api(`/me/playlists`, 'POST', { name, description: 'Exported from objectsort', public: true });
     if (!pl || !pl.id) throw new Error('Playlist creation failed — Spotify returned no playlist ID');
     await new Promise(r => setTimeout(r, 1500));
-    const uris = visible.map(t => `spotify:track:${t.id}`);
-    for (let i = 0; i < uris.length; i += 100)
-      await api(`/playlists/${pl.id}/tracks`, 'POST', { uris: uris.slice(i, i + 100) });
+    const uris = visible.map(t => `spotify:track:${t.id}`).filter(u => !u.includes('null') && !u.includes('undefined'));
+    console.log('[export] playlist id:', pl.id, 'track count:', uris.length, 'first uri:', uris[0]);
+    for (let i = 0; i < uris.length; i += 100) {
+      const batch = uris.slice(i, i + 100);
+      console.log('[export] adding batch', i/100 + 1, 'size:', batch.length);
+      const res = await fetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + ACCESS_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uris: batch })
+      });
+      console.log('[export] batch response:', res.status, res.statusText);
+      if (!res.ok) { const txt = await res.text(); console.error('[export] batch error:', txt); throw new Error(txt); }
+    }
     setStatus(`✓ "${name}" created with ${visible.length} tracks`);
   } catch(e) {
     console.error('[export] failed:', e);
