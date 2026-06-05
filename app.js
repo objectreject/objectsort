@@ -2062,9 +2062,9 @@ function copyTagsFromSelected() {
   _copiedTags = [...songTags];
   const btn = document.getElementById('copy-tags-btn');
   if (btn) {
-    btn.textContent = 'copied!';
+    btn.textContent = 'Copied!';
     btn.style.color = '#f59e0b';
-    setTimeout(() => { btn.textContent = 'copy'; btn.style.color = '#333'; }, 1500);
+    setTimeout(() => { btn.textContent = 'Your Tags'; btn.style.color = ''; }, 1200);
   }
 }
 

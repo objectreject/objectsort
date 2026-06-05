@@ -162,7 +162,8 @@
           </div>
           <div class="section-label" style="margin-top:0.5rem">
             <span id="copy-tags-btn" onclick="copyTagsFromSelected()" title="Copy tags (paste with ⌘V)"
-              style="cursor:pointer;user-select:none">Your Tags</span>
+              style="cursor:pointer;user-select:none;transition:color 0.15s"
+              onmouseover="this.style.color='#bbb'" onmouseout="this.style.color=''">Your Tags</span>
           </div>
           <div class="current-tags" id="current-tags" style="margin-bottom:1.2rem"></div>
 
