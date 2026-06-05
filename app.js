@@ -1657,7 +1657,9 @@ function selectTrack(id) {
   });
   const primaryArtist = t.artist.split(',')[0].trim();
   document.getElementById('discogs-btn').href =
-    'https://www.discogs.com/search/?q=' + encodeURIComponent(t.artist + ' ' + t.title);
+    'https://www.discogs.com/search/?q=' + encodeURIComponent(primaryArtist);
+  document.getElementById('wikipedia-btn').href =
+    'https://en.wikipedia.org/wiki/Special:Search?search=' + encodeURIComponent(primaryArtist);
   document.getElementById('rym-btn').href =
     'https://rateyourmusic.com/search?searchterm=' + encodeURIComponent(primaryArtist) + '&searchtype=a';
   document.getElementById('spotify-play-btn').href = 'spotify:track:' + t.id;
