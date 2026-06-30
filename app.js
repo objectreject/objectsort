@@ -357,7 +357,10 @@ async function loadMoreTracks(reset=false) {
     currentOffset += data.items.length;
     setProgress(10 + (currentOffset / totalTracks) * 80);
     updateLibraryBar();
-    if (currentOffset % 500 === 0) { renderSongList(); updateStats(); saveData(); }
+    if (currentOffset % 500 === 0) {
+      renderSongList(); updateStats(); saveData();
+      if (document.getElementById('unstreamable-modal')?.classList.contains('open')) renderUnstreamableList();
+    }
     if (!data.next) break;
   }
   isLoading = false;
@@ -365,6 +368,7 @@ async function loadMoreTracks(reset=false) {
   setTimeout(() => setProgress(0), 500);
   setStatus(`All ${tracks.length.toLocaleString()} tracks loaded`);
   saveData(); renderSongList(); updateStats(); startStatTicker();
+  if (document.getElementById('unstreamable-modal')?.classList.contains('open')) renderUnstreamableList();
 }
 
 // ── GENRES ──
@@ -1819,12 +1823,18 @@ document.addEventListener('click', e => {
 
 // ── UNSTREAMABLE MODAL ──
 function showUnstreamableModal() {
-  const modal = document.getElementById('unstreamable-modal');
+  document.getElementById('unstreamable-modal').classList.add('open');
+  renderUnstreamableList();
+}
+function hideUnstreamableModal() {
+  document.getElementById('unstreamable-modal').classList.remove('open');
+}
+function renderUnstreamableList() {
   const list = document.getElementById('unstreamable-list');
-  modal.classList.add('open');
+  if (!list) return;
   const unavailable = tracks.filter(t => unavailableIds.has(t.id));
   if (!unavailable.length) {
-    list.innerHTML = '<div style="font-size:0.78rem;color:#555;text-align:center;padding:1.5rem 0">No unavailable tracks detected yet.<br><span style="font-size:0.68rem">They\'ll appear here after a sync catches them.</span></div>';
+    list.innerHTML = '<div style="font-size:0.78rem;color:#555;text-align:center;padding:1.5rem 0">No unavailable tracks detected yet.<br><span style="font-size:0.68rem">Re-sync your library to check.</span></div>';
     return;
   }
   list.innerHTML = '';
@@ -1854,15 +1864,11 @@ function showUnstreamableModal() {
     list.appendChild(row);
   });
 }
-function hideUnstreamableModal() {
-  document.getElementById('unstreamable-modal').classList.remove('open');
-}
 document.getElementById('unstreamable-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('unstreamable-modal')) hideUnstreamableModal();
 });
 
 function resyncLibrary() {
-  if (!confirm('Re-sync will re-fetch your full library from Spotify. This is needed once to enable unavailable track detection. Continue?')) return;
   setStatus('Re-syncing library...');
   loadMoreTracks(true);
 }
