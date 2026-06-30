@@ -1889,6 +1889,11 @@ function renderUnstreamableDetail(type) {
       const cmp = a.artist.localeCompare(b.artist);
       return _uSort.dir === 1 ? cmp : -cmp;
     });
+  } else if (_uSort.col === 'album' && _uSort.dir > 0) {
+    items = [...items].sort((a, b) => {
+      const cmp = (a.album || '').localeCompare(b.album || '');
+      return _uSort.dir === 1 ? cmp : -cmp;
+    });
   } else if (_uSort.col === 'added' && _uSort.dir > 0) {
     items = [...items].sort((a, b) => {
       const cmp = (a.addedAt || '').localeCompare(b.addedAt || '');
@@ -1899,7 +1904,7 @@ function renderUnstreamableDetail(type) {
   // Sort bar
   const sortBar = document.getElementById('umodal-sort-bar');
   sortBar.innerHTML = '';
-  [['added', 'Date Added'], ['artist', 'Artist']].forEach(([col, label]) => {
+  [['added', 'Date Added'], ['artist', 'Artist'], ['album', 'Album']].forEach(([col, label]) => {
     const btn = document.createElement('button');
     btn.className = 'usort-col' + (_uSort.col === col && _uSort.dir > 0 ? ' active' : '');
     const arrow = _uSort.col === col ? (_uSort.dir === 1 ? ' ↑' : _uSort.dir === 2 ? ' ↓' : '') : '';
