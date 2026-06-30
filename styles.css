@@ -126,7 +126,6 @@ button { cursor: pointer; font-family: inherit; font-size: 0.85rem; border: none
 .song-row.active { background: #1a1400; border-left: 2px solid #f59e0b; }
 .song-row.bulk-selected { background: rgba(52,120,220,0.1); border-left: 2px solid #3478dc; }
 .song-row.unavailable { opacity: 0.4; }
-.song-row.unavailable .song-title { text-decoration: line-through; }
 #bulk-bar { background: #120e00; border-bottom: 1px solid #2a1f00; padding: 0.45rem 0.75rem; display: none; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 #bulk-bar .bulk-label { font-size: 0.75rem; color: #f59e0b; font-weight: 600; white-space: nowrap; }
 #bulk-bar .bulk-input-wrap { flex: 1; position: relative; }
@@ -211,6 +210,20 @@ button { cursor: pointer; font-family: inherit; font-size: 0.85rem; border: none
 /* MODALS */
 #export-modal, #unstreamable-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
 #export-modal.open, #unstreamable-modal.open { display: flex; }
+#unstreamable-modal-box { width: 480px; max-width: 95vw; }
+#unstreamable-modal-box.detail-mode { width: 640px; }
+.umodal-nav-btn { width: 100%; text-align: left; background: #111; border: 1px solid #222; border-radius: 8px; padding: 0.75rem 1rem; cursor: pointer; font-family: inherit; color: #aaa; font-size: 0.85rem; transition: border-color 0.15s, color 0.15s; display: flex; justify-content: space-between; align-items: center; }
+.umodal-nav-btn:hover { border-color: #444; color: #eee; }
+.umodal-nav-btn .umodal-count { font-size: 0.7rem; color: #555; }
+.usort-col { background: none; border: none; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #555; cursor: pointer; padding: 0.2rem 0.5rem 0.2rem 0; font-family: inherit; white-space: nowrap; }
+.usort-col:hover { color: #aaa; }
+.usort-col.active { color: #f59e0b; }
+.utrack-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-bottom: 1px solid #161616; }
+.utrack-art { width: 34px; height: 34px; border-radius: 3px; object-fit: cover; flex-shrink: 0; opacity: 0.6; background: #1a1a1a; border: 1px solid #2a2a2a; }
+.utrack-info { flex: 1; min-width: 0; }
+.utrack-title { font-size: 0.8rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.utrack-sub { font-size: 0.68rem; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.utrack-links { display: flex; gap: 0.3rem; flex-shrink: 0; }
 .modal-box { background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 1.5rem; width: 360px; max-height: 80vh; overflow-y: auto; }
 .modal-box::-webkit-scrollbar { width: 3px; }
 .modal-box::-webkit-scrollbar-thumb { background: #333; }

@@ -1839,73 +1839,118 @@ document.addEventListener('click', e => {
 });
 
 // ── UNSTREAMABLE MODAL ──
+let _uSort = { col: null, dir: 0 }; // col: 'artist'|'added', dir: 0=off 1=asc 2=desc
+
 function showUnstreamableModal() {
   document.getElementById('unstreamable-modal').classList.add('open');
-  renderUnstreamableList();
+  showUnstreamableHome();
 }
 function hideUnstreamableModal() {
   document.getElementById('unstreamable-modal').classList.remove('open');
 }
-function renderUnstreamableList() {
-  const list = document.getElementById('unstreamable-list');
-  if (!list) return;
+function showUnstreamableHome() {
+  document.getElementById('umodal-home').style.display = '';
+  document.getElementById('umodal-detail').style.display = 'none';
+  document.getElementById('unstreamable-modal-box').classList.remove('detail-mode');
   const unavailable = tracks.filter(t => unavailableIds.has(t.id));
   const takenDown = tracks.filter(t => takenDownIds.has(t.id));
+  const btns = document.getElementById('umodal-home-btns');
+  btns.innerHTML = '';
+  const makeBtn = (label, count, onclick) => {
+    const btn = document.createElement('button');
+    btn.className = 'umodal-nav-btn';
+    btn.innerHTML = `<span>${label}</span><span class="umodal-count">${count} track${count !== 1 ? 's' : ''} →</span>`;
+    btn.onclick = onclick;
+    btns.appendChild(btn);
+  };
   if (!unavailable.length && !takenDown.length) {
-    list.innerHTML = '<div style="font-size:0.78rem;color:#555;text-align:center;padding:1.5rem 0">No unavailable tracks detected yet.<br><span style="font-size:0.68rem">Re-sync your library to check.</span></div>';
+    btns.innerHTML = '<div style="font-size:0.78rem;color:#555;text-align:center;padding:1.5rem 0">No unavailable tracks detected yet.<br><span style="font-size:0.68rem">Re-sync your library to check.</span></div>';
     return;
   }
-  list.innerHTML = '';
+  if (unavailable.length) makeBtn('Currently Unavailable', unavailable.length, () => showUnstreamableDetail('unavailable'));
+  if (takenDown.length) makeBtn('Taken Down', takenDown.length, () => showUnstreamableDetail('takendown'));
+}
 
-  const buildRow = (t, hasArt) => {
-    const row = document.createElement('div');
-    row.style.cssText = 'padding:0.55rem 0;border-bottom:1px solid #1e1e1e;display:flex;gap:0.6rem;align-items:center';
+function showUnstreamableDetail(type) {
+  _uSort = { col: 'added', dir: 1 };
+  document.getElementById('umodal-home').style.display = 'none';
+  document.getElementById('umodal-detail').style.display = '';
+  document.getElementById('unstreamable-modal-box').classList.add('detail-mode');
+  document.getElementById('umodal-detail-title').textContent = type === 'unavailable' ? 'Currently Unavailable' : 'Taken Down';
+  renderUnstreamableDetail(type);
+}
+
+function renderUnstreamableDetail(type) {
+  const hasArt = type === 'unavailable';
+  let items = tracks.filter(t => type === 'unavailable' ? unavailableIds.has(t.id) : takenDownIds.has(t.id));
+
+  if (_uSort.col === 'artist' && _uSort.dir > 0) {
+    items = [...items].sort((a, b) => {
+      const cmp = a.artist.localeCompare(b.artist);
+      return _uSort.dir === 1 ? cmp : -cmp;
+    });
+  } else if (_uSort.col === 'added' && _uSort.dir > 0) {
+    items = [...items].sort((a, b) => {
+      const cmp = (a.addedAt || '').localeCompare(b.addedAt || '');
+      return _uSort.dir === 1 ? cmp : -cmp;
+    });
+  }
+
+  // Sort bar
+  const sortBar = document.getElementById('umodal-sort-bar');
+  sortBar.innerHTML = '';
+  [['added', 'Date Added'], ['artist', 'Artist']].forEach(([col, label]) => {
+    const btn = document.createElement('button');
+    btn.className = 'usort-col' + (_uSort.col === col && _uSort.dir > 0 ? ' active' : '');
+    const arrow = _uSort.col === col ? (_uSort.dir === 1 ? ' ↑' : _uSort.dir === 2 ? ' ↓' : '') : '';
+    btn.textContent = label + arrow;
+    btn.onclick = () => {
+      if (_uSort.col === col) { _uSort.dir = (_uSort.dir + 1) % 3; if (_uSort.dir === 0) _uSort.col = null; }
+      else { _uSort.col = col; _uSort.dir = 1; }
+      renderUnstreamableDetail(type);
+    };
+    sortBar.appendChild(btn);
+  });
+
+  // Track list
+  const list = document.getElementById('umodal-detail-list');
+  list.innerHTML = '';
+  items.forEach(t => {
+    const row = document.createElement('div'); row.className = 'utrack-row';
     if (hasArt && t.art) {
-      const img = document.createElement('img');
-      img.src = t.art; img.style.cssText = 'width:36px;height:36px;border-radius:4px;object-fit:cover;flex-shrink:0;opacity:0.5';
+      const img = document.createElement('img'); img.className = 'utrack-art'; img.src = t.art;
       row.appendChild(img);
     } else {
-      const ph = document.createElement('div');
-      ph.style.cssText = 'width:36px;height:36px;border-radius:4px;background:#1a1a1a;flex-shrink:0;border:1px solid #2a2a2a';
+      const ph = document.createElement('div'); ph.className = 'utrack-art';
       row.appendChild(ph);
     }
-    const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0';
-    const title = document.createElement('div');
-    title.style.cssText = 'font-size:0.82rem;color:#555;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-    title.textContent = t.title;
-    const artist = document.createElement('div');
-    artist.style.cssText = 'font-size:0.72rem;color:#3a3a3a;margin-top:1px';
-    artist.textContent = t.artist;
-    const links = document.createElement('div');
-    links.style.cssText = 'display:flex;gap:0.35rem;margin-top:0.25rem';
-    const primaryArtist = t.artist.split(',')[0].trim();
-    const q = encodeURIComponent(primaryArtist + ' ' + t.title);
-    [['discogs', 'https://www.discogs.com/search/?q=' + q], ['google', 'https://www.google.com/search?q=' + q]].forEach(([label, href]) => {
-      const a = document.createElement('a');
-      a.href = href; a.target = '_blank'; a.textContent = label + ' ↗'; a.className = 'detail-link';
-      links.appendChild(a);
-    });
-    info.append(title, artist, links);
+    const info = document.createElement('div'); info.className = 'utrack-info';
+    const title = document.createElement('div'); title.className = 'utrack-title'; title.textContent = t.title;
+    const sub = document.createElement('div'); sub.className = 'utrack-sub';
+    sub.textContent = [t.artist.split(',')[0].trim(), t.album].filter(Boolean).join(' · ');
+    info.append(title, sub);
     row.appendChild(info);
-    return row;
-  };
+    const links = document.createElement('div'); links.className = 'utrack-links';
+    const primaryArtist = t.artist.split(',')[0].trim();
+    const q = encodeURIComponent(primaryArtist + ' ' + t.album);
+    [['discogs', 'https://www.discogs.com/search/?q=' + q], ['google', 'https://www.google.com/search?q=' + q]].forEach(([label, href]) => {
+      const a = document.createElement('a'); a.href = href; a.target = '_blank';
+      a.textContent = label + ' ↗'; a.className = 'detail-link'; links.appendChild(a);
+    });
+    row.appendChild(links);
+    list.appendChild(row);
+  });
+}
 
-  if (unavailable.length) {
-    const heading = document.createElement('div');
-    heading.style.cssText = 'font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:#555;margin-bottom:0.4rem';
-    heading.textContent = 'Currently Unavailable';
-    list.appendChild(heading);
-    unavailable.forEach(t => list.appendChild(buildRow(t, true)));
-  }
-
-  if (takenDown.length) {
-    const heading = document.createElement('div');
-    heading.style.cssText = 'font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:#555;margin-top:' + (unavailable.length ? '1rem' : '0') + ';margin-bottom:0.4rem';
-    heading.textContent = 'Taken Down';
-    list.appendChild(heading);
-    takenDown.forEach(t => list.appendChild(buildRow(t, false)));
+function renderUnstreamableList() {
+  if (document.getElementById('umodal-detail').style.display !== 'none') {
+    const type = document.getElementById('umodal-detail-title').textContent === 'Currently Unavailable' ? 'unavailable' : 'takendown';
+    renderUnstreamableDetail(type);
+  } else {
+    showUnstreamableHome();
   }
 }
+
 document.getElementById('unstreamable-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('unstreamable-modal')) hideUnstreamableModal();
 });

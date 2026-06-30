@@ -267,14 +267,28 @@
 
 <!-- UNSTREAMABLE MODAL -->
 <div id="unstreamable-modal">
-  <div class="modal-box">
-    <div class="modal-head">
-      <strong style="font-size:0.9rem">Unstreamable</strong>
-      <button class="btn-outline btn-sm" onclick="hideUnstreamableModal()">✕</button>
+  <div class="modal-box" id="unstreamable-modal-box">
+    <!-- HOME VIEW -->
+    <div id="umodal-home">
+      <div class="modal-head">
+        <strong style="font-size:0.9rem">Unstreamable</strong>
+        <button class="btn-outline btn-sm" onclick="hideUnstreamableModal()">✕</button>
+      </div>
+      <div id="umodal-home-btns" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.2rem"></div>
+      <button class="btn-outline btn-sm" style="width:100%;font-size:0.68rem;color:#444;border-color:#222" onclick="resyncLibrary()">Re-sync library</button>
     </div>
-    <div style="font-size:0.72rem;color:#555;margin-bottom:0.9rem;line-height:1.5">Tracks that were in your Liked Songs but are no longer available on Spotify.</div>
-    <button class="btn-outline btn-sm" style="width:100%;margin-bottom:0.9rem" onclick="resyncLibrary()">Re-sync library</button>
-    <div id="unstreamable-list"></div>
+    <!-- DETAIL VIEW -->
+    <div id="umodal-detail" style="display:none">
+      <div class="modal-head">
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <button class="btn-outline btn-sm" onclick="showUnstreamableHome()" style="font-size:0.68rem;padding:0.2rem 0.5rem">← Back</button>
+          <strong id="umodal-detail-title" style="font-size:0.9rem"></strong>
+        </div>
+        <button class="btn-outline btn-sm" onclick="hideUnstreamableModal()">✕</button>
+      </div>
+      <div id="umodal-sort-bar" style="display:flex;gap:0;border-bottom:1px solid #1e1e1e;margin-bottom:0.3rem;padding-bottom:0.3rem"></div>
+      <div id="umodal-detail-list" style="max-height:55vh;overflow-y:auto"></div>
+    </div>
   </div>
 </div>
 
