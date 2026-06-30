@@ -9,7 +9,8 @@ let genreMappings = {};
 let trackMeta = {}; // { trackId: { countries: [], year } }
 let flagged = new Set();
 let removedIds = new Set();
-let unavailableIds = new Set();
+let unavailableIds = new Set(); // is_playable === false
+let takenDownIds = new Set();   // item.track === null
 let artistGenreCache = {};
 let tempoCache = {};
 
@@ -108,6 +109,7 @@ function saveData() {
   localStorage.setItem('objectsort_flagged', JSON.stringify([...flagged]));
   localStorage.setItem('objectsort_removed', JSON.stringify([...removedIds]));
   localStorage.setItem('objectsort_unavailable', JSON.stringify([...unavailableIds]));
+  localStorage.setItem('objectsort_takendown', JSON.stringify([...takenDownIds]));
   if (ACCESS_TOKEN) localStorage.setItem('objectsort_token', ACCESS_TOKEN);
 }
 
@@ -132,6 +134,8 @@ function loadData() {
   if (rm) { try { removedIds = new Set(JSON.parse(rm)); } catch(e) {} }
   const uv = localStorage.getItem('objectsort_unavailable');
   if (uv) { try { unavailableIds = new Set(JSON.parse(uv)); } catch(e) {} }
+  const td = localStorage.getItem('objectsort_takendown');
+  if (td) { try { takenDownIds = new Set(JSON.parse(td)); } catch(e) {} }
   // Migrate old single-country string to array
   Object.values(trackMeta).forEach(m => {
     if (m.country !== undefined && !m.countries) {
@@ -299,16 +303,17 @@ async function loadTracks() {
     const newTracks = [];
     let offset = 0, foundExisting = false;
     while (!foundExisting) {
-      const data = await api('/me/tracks?limit=50&offset=' + offset);
+      const data = await api('/me/tracks?limit=50&offset=' + offset + '&market=from_token');
       if (!data || !data.items || data.items.length === 0) break;
       totalTracks = data.total;
       for (const item of data.items) {
         const t = item.track;
         if (!t) {
           const match = tracks.find(tr => tr.addedAt === item.added_at);
-          if (match) unavailableIds.add(match.id);
+          if (match) takenDownIds.add(match.id);
           continue;
         }
+        if (t.is_playable === false) { unavailableIds.add(t.id); }
         if (knownIds.has(t.id)) { foundExisting = true; break; }
         if (!removedIds.has(t.id)) newTracks.push(mapTrack(t, item.added_at));
       }
@@ -339,19 +344,20 @@ async function loadMoreTracks(reset=false) {
   if (isLoading && !reset) return;
   isLoading = true;
   const addedAtMap = {};
-  tracks.forEach(t => { if (t.addedAt) addedAtMap[t.addedAt] = t.id; });
-  if (reset) { tracks = []; currentOffset = 0; }
+  tracks.forEach(t => { if (t.addedAt) addedAtMap[t.addedAt] = t; });
+  if (reset) { tracks = []; currentOffset = 0; unavailableIds = new Set(); }
   updateLibraryBar();
   while (true) {
-    const data = await api(`/me/tracks?limit=50&offset=${currentOffset}`);
+    const data = await api(`/me/tracks?limit=50&offset=${currentOffset}&market=from_token`);
     if (!data || !data.items || data.items.length === 0) break;
     totalTracks = data.total;
     for (const item of data.items) {
       if (!item.track) {
-        const id = addedAtMap[item.added_at];
-        if (id) unavailableIds.add(id);
+        const cached = addedAtMap[item.added_at];
+        if (cached) { takenDownIds.add(cached.id); tracks.push(cached); }
         continue;
       }
+      if (item.track.is_playable === false) unavailableIds.add(item.track.id);
       if (!removedIds.has(item.track.id)) tracks.push(mapTrack(item.track, item.added_at));
     }
     currentOffset += data.items.length;
@@ -632,7 +638,7 @@ let _vsInitialized = false;
 
 function buildSongRow(t, idx) {
   const isBulk = selectedTrackIds.has(t.id);
-  const isUnavailable = unavailableIds.has(t.id);
+  const isUnavailable = unavailableIds.has(t.id) || takenDownIds.has(t.id);
   const row = document.createElement('div');
   row.className = 'song-row' + (selectedTrackId === t.id ? ' active' : '') + (isBulk ? ' bulk-selected' : '') + (isUnavailable ? ' unavailable' : '');
   row.style.top = (idx * ROW_H) + 'px';
@@ -1685,7 +1691,18 @@ function selectTrack(id) {
     'https://en.wikipedia.org/wiki/Special:Search?search=' + encodeURIComponent(primaryArtist);
   document.getElementById('rym-btn').href =
     'https://rateyourmusic.com/search?searchterm=' + encodeURIComponent(primaryArtist) + '&searchtype=a';
-  document.getElementById('spotify-play-btn').href = 'spotify:track:' + t.id;
+  const playBtn = document.getElementById('spotify-play-btn');
+  if (unavailableIds.has(t.id) || takenDownIds.has(t.id)) {
+    playBtn.removeAttribute('href');
+    playBtn.style.pointerEvents = 'none';
+    playBtn.style.color = '#333';
+    playBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg> No longer on Spotify';
+  } else {
+    playBtn.href = 'spotify:track:' + t.id;
+    playBtn.style.pointerEvents = '';
+    playBtn.style.color = '';
+    playBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg> Play on Spotify';
+  }
 
   const audioBar = document.querySelector('.audio-bar');
   if (t.preview_url) {
@@ -1833,36 +1850,61 @@ function renderUnstreamableList() {
   const list = document.getElementById('unstreamable-list');
   if (!list) return;
   const unavailable = tracks.filter(t => unavailableIds.has(t.id));
-  if (!unavailable.length) {
+  const takenDown = tracks.filter(t => takenDownIds.has(t.id));
+  if (!unavailable.length && !takenDown.length) {
     list.innerHTML = '<div style="font-size:0.78rem;color:#555;text-align:center;padding:1.5rem 0">No unavailable tracks detected yet.<br><span style="font-size:0.68rem">Re-sync your library to check.</span></div>';
     return;
   }
   list.innerHTML = '';
-  unavailable.forEach(t => {
+
+  const buildRow = (t, hasArt) => {
     const row = document.createElement('div');
-    row.style.cssText = 'padding:0.55rem 0;border-bottom:1px solid #1e1e1e;display:flex;flex-direction:column;gap:0.25rem';
+    row.style.cssText = 'padding:0.55rem 0;border-bottom:1px solid #1e1e1e;display:flex;gap:0.6rem;align-items:center';
+    if (hasArt && t.art) {
+      const img = document.createElement('img');
+      img.src = t.art; img.style.cssText = 'width:36px;height:36px;border-radius:4px;object-fit:cover;flex-shrink:0;opacity:0.5';
+      row.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.style.cssText = 'width:36px;height:36px;border-radius:4px;background:#1a1a1a;flex-shrink:0;border:1px solid #2a2a2a';
+      row.appendChild(ph);
+    }
+    const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0';
     const title = document.createElement('div');
-    title.style.cssText = 'font-size:0.82rem;color:#666;text-decoration:line-through';
+    title.style.cssText = 'font-size:0.82rem;color:#555;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
     title.textContent = t.title;
     const artist = document.createElement('div');
-    artist.style.cssText = 'font-size:0.72rem;color:#444';
+    artist.style.cssText = 'font-size:0.72rem;color:#3a3a3a;margin-top:1px';
     artist.textContent = t.artist;
     const links = document.createElement('div');
-    links.style.cssText = 'display:flex;gap:0.4rem;margin-top:0.15rem';
+    links.style.cssText = 'display:flex;gap:0.35rem;margin-top:0.25rem';
     const primaryArtist = t.artist.split(',')[0].trim();
     const q = encodeURIComponent(primaryArtist + ' ' + t.title);
-    [
-      ['discogs', 'https://www.discogs.com/search/?q=' + q],
-      ['google', 'https://www.google.com/search?q=' + q],
-    ].forEach(([label, href]) => {
+    [['discogs', 'https://www.discogs.com/search/?q=' + q], ['google', 'https://www.google.com/search?q=' + q]].forEach(([label, href]) => {
       const a = document.createElement('a');
-      a.href = href; a.target = '_blank'; a.textContent = label + ' ↗';
-      a.className = 'detail-link';
+      a.href = href; a.target = '_blank'; a.textContent = label + ' ↗'; a.className = 'detail-link';
       links.appendChild(a);
     });
-    row.append(title, artist, links);
-    list.appendChild(row);
-  });
+    info.append(title, artist, links);
+    row.appendChild(info);
+    return row;
+  };
+
+  if (unavailable.length) {
+    const heading = document.createElement('div');
+    heading.style.cssText = 'font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:#555;margin-bottom:0.4rem';
+    heading.textContent = 'Currently Unavailable';
+    list.appendChild(heading);
+    unavailable.forEach(t => list.appendChild(buildRow(t, true)));
+  }
+
+  if (takenDown.length) {
+    const heading = document.createElement('div');
+    heading.style.cssText = 'font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:#555;margin-top:' + (unavailable.length ? '1rem' : '0') + ';margin-bottom:0.4rem';
+    heading.textContent = 'Taken Down';
+    list.appendChild(heading);
+    takenDown.forEach(t => list.appendChild(buildRow(t, false)));
+  }
 }
 document.getElementById('unstreamable-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('unstreamable-modal')) hideUnstreamableModal();
