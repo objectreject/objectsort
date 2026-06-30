@@ -1863,6 +1863,7 @@ document.getElementById('unstreamable-modal').addEventListener('click', e => {
 
 function resyncLibrary() {
   if (!confirm('Re-sync will re-fetch your full library from Spotify. This is needed once to enable unavailable track detection. Continue?')) return;
+  setStatus('Re-syncing library...');
   loadMoreTracks(true);
 }
 
