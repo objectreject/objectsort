@@ -33,19 +33,20 @@
 <!-- MAIN APP -->
 <div id="app">
   <div id="topbar">
+    <h1>objectsort</h1>
+    <div class="stat-pill">Tagged: <span id="stat-tagged">0</span></div>
+    <div class="stat-pill">Untagged: <span id="stat-untagged">0</span></div>
+    <div class="spacer"></div>
     <div style="position:relative">
       <button id="hamburger-btn" onclick="toggleHamburgerMenu()">☰</button>
       <div id="hamburger-menu">
         <button class="hmenu-item" onclick="showBackupModal();closeHamburgerMenu()">Backup</button>
         <button class="hmenu-item" onclick="showUnstreamableModal();closeHamburgerMenu()">Unstreamable</button>
+        <button class="hmenu-item" onclick="resyncLibrary();closeHamburgerMenu()">Re-sync library</button>
         <hr class="hmenu-sep">
         <button class="hmenu-item danger" onclick="logout()">Logout</button>
       </div>
     </div>
-    <h1>objectsort</h1>
-    <div class="stat-pill">Tagged: <span id="stat-tagged">0</span></div>
-    <div class="stat-pill">Untagged: <span id="stat-untagged">0</span></div>
-    <div class="spacer"></div>
   </div>
 
   <div id="backup-banner" style="display:none;align-items:center;gap:0.75rem;padding:0.4rem 1rem;background:#1a1200;border-bottom:1px solid #3a2800;flex-shrink:0">

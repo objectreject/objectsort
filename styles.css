@@ -48,7 +48,7 @@ button { cursor: pointer; font-family: inherit; font-size: 0.85rem; border: none
 /* HAMBURGER MENU */
 #hamburger-btn { background: none; border: none; padding: 0.2rem 0.4rem; color: #666; font-size: 1rem; line-height: 1; border-radius: 5px; }
 #hamburger-btn:hover { background: #222; color: #eee; }
-#hamburger-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; min-width: 160px; z-index: 80; box-shadow: 0 8px 24px rgba(0,0,0,0.6); overflow: hidden; }
+#hamburger-menu { display: none; position: absolute; top: calc(100% + 4px); right: 0; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; min-width: 160px; z-index: 80; box-shadow: 0 8px 24px rgba(0,0,0,0.6); overflow: hidden; }
 #hamburger-menu.open { display: block; }
 .hmenu-item { display: block; width: 100%; text-align: left; background: none; border: none; padding: 0.55rem 0.9rem; font-size: 0.8rem; color: #aaa; cursor: pointer; font-family: inherit; }
 .hmenu-item:hover { background: #222; color: #eee; }

@@ -1861,6 +1861,11 @@ document.getElementById('unstreamable-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('unstreamable-modal')) hideUnstreamableModal();
 });
 
+function resyncLibrary() {
+  if (!confirm('Re-sync will re-fetch your full library from Spotify. This is needed once to enable unavailable track detection. Continue?')) return;
+  loadMoreTracks(true);
+}
+
 function showBackupModal() { document.getElementById('export-modal').classList.add('open'); }
 function showExportModal() { showBackupModal(); }
 
