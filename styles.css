@@ -45,6 +45,17 @@ button { cursor: pointer; font-family: inherit; font-size: 0.85rem; border: none
 #stat-ticker-track { font-size: 0.7rem; color: #444; letter-spacing: 0.02em; white-space: nowrap; position: absolute; line-height: 28px; will-change: transform; transition: opacity 0.3s ease; }
 #stat-ticker.collapsed #stat-ticker-track { opacity: 0; }
 
+/* HAMBURGER MENU */
+#hamburger-btn { background: none; border: none; padding: 0.2rem 0.4rem; color: #666; font-size: 1rem; line-height: 1; border-radius: 5px; }
+#hamburger-btn:hover { background: #222; color: #eee; }
+#hamburger-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; min-width: 160px; z-index: 80; box-shadow: 0 8px 24px rgba(0,0,0,0.6); overflow: hidden; }
+#hamburger-menu.open { display: block; }
+.hmenu-item { display: block; width: 100%; text-align: left; background: none; border: none; padding: 0.55rem 0.9rem; font-size: 0.8rem; color: #aaa; cursor: pointer; font-family: inherit; }
+.hmenu-item:hover { background: #222; color: #eee; }
+.hmenu-item.danger { color: #c0392b; }
+.hmenu-item.danger:hover { background: rgba(192,57,43,0.1); color: #e74c3c; }
+.hmenu-sep { border: none; border-top: 1px solid #222; margin: 0; }
+
 /* LAYOUT */
 #app { display: none; flex-direction: column; height: 100vh; overflow: hidden; }
 .layout { display: flex; flex: 1; overflow: hidden; }
@@ -114,6 +125,8 @@ button { cursor: pointer; font-family: inherit; font-size: 0.85rem; border: none
 .song-row:hover { background: #1e1e1e; }
 .song-row.active { background: #1a1400; border-left: 2px solid #f59e0b; }
 .song-row.bulk-selected { background: rgba(52,120,220,0.1); border-left: 2px solid #3478dc; }
+.song-row.unavailable { opacity: 0.4; }
+.song-row.unavailable .song-title { text-decoration: line-through; }
 #bulk-bar { background: #120e00; border-bottom: 1px solid #2a1f00; padding: 0.45rem 0.75rem; display: none; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 #bulk-bar .bulk-label { font-size: 0.75rem; color: #f59e0b; font-weight: 600; white-space: nowrap; }
 #bulk-bar .bulk-input-wrap { flex: 1; position: relative; }
@@ -195,9 +208,9 @@ button { cursor: pointer; font-family: inherit; font-size: 0.85rem; border: none
 .m-item:hover { background: #1a1a1a; color: #eee; }
 .m-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-/* EXPORT MODAL */
-#export-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
-#export-modal.open { display: flex; }
+/* MODALS */
+#export-modal, #unstreamable-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+#export-modal.open, #unstreamable-modal.open { display: flex; }
 .modal-box { background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 1.5rem; width: 360px; max-height: 80vh; overflow-y: auto; }
 .modal-box::-webkit-scrollbar { width: 3px; }
 .modal-box::-webkit-scrollbar-thumb { background: #333; }

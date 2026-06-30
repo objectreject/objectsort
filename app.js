@@ -9,6 +9,7 @@ let genreMappings = {};
 let trackMeta = {}; // { trackId: { countries: [], year } }
 let flagged = new Set();
 let removedIds = new Set();
+let unavailableIds = new Set();
 let artistGenreCache = {};
 let tempoCache = {};
 
@@ -106,6 +107,7 @@ function saveData() {
   localStorage.setItem('objectsort_track_meta', JSON.stringify(trackMeta));
   localStorage.setItem('objectsort_flagged', JSON.stringify([...flagged]));
   localStorage.setItem('objectsort_removed', JSON.stringify([...removedIds]));
+  localStorage.setItem('objectsort_unavailable', JSON.stringify([...unavailableIds]));
   if (ACCESS_TOKEN) localStorage.setItem('objectsort_token', ACCESS_TOKEN);
 }
 
@@ -128,6 +130,8 @@ function loadData() {
   if (fl) { try { flagged = new Set(JSON.parse(fl)); } catch(e) {} }
   const rm = localStorage.getItem('objectsort_removed');
   if (rm) { try { removedIds = new Set(JSON.parse(rm)); } catch(e) {} }
+  const uv = localStorage.getItem('objectsort_unavailable');
+  if (uv) { try { unavailableIds = new Set(JSON.parse(uv)); } catch(e) {} }
   // Migrate old single-country string to array
   Object.values(trackMeta).forEach(m => {
     if (m.country !== undefined && !m.countries) {
@@ -266,7 +270,7 @@ async function api(path, method='GET', body=null) {
 }
 
 // ── LOAD TRACKS ──
-function mapTrack(t) {
+function mapTrack(t, addedAt = '') {
   return {
     id: t.id, title: t.name,
     artist: t.artists.map(a => a.name).join(', '),
@@ -276,7 +280,8 @@ function mapTrack(t) {
     releaseDate: t.album.release_date || '',
     art: t.album.images?.[1]?.url || t.album.images?.[0]?.url || '',
     preview_url: t.preview_url,
-    duration_ms: t.duration_ms
+    duration_ms: t.duration_ms,
+    addedAt
   };
 }
 
@@ -299,9 +304,13 @@ async function loadTracks() {
       totalTracks = data.total;
       for (const item of data.items) {
         const t = item.track;
-        if (!t) continue;
+        if (!t) {
+          const match = tracks.find(tr => tr.addedAt === item.added_at);
+          if (match) unavailableIds.add(match.id);
+          continue;
+        }
         if (knownIds.has(t.id)) { foundExisting = true; break; }
-        if (!removedIds.has(t.id)) newTracks.push(mapTrack(t));
+        if (!removedIds.has(t.id)) newTracks.push(mapTrack(t, item.added_at));
       }
       if (foundExisting || !data.next) break;
       offset += data.items.length;
@@ -329,13 +338,22 @@ async function loadTracks() {
 async function loadMoreTracks(reset=false) {
   if (isLoading && !reset) return;
   isLoading = true;
+  const addedAtMap = {};
+  tracks.forEach(t => { if (t.addedAt) addedAtMap[t.addedAt] = t.id; });
   if (reset) { tracks = []; currentOffset = 0; }
   updateLibraryBar();
   while (true) {
     const data = await api(`/me/tracks?limit=50&offset=${currentOffset}`);
     if (!data || !data.items || data.items.length === 0) break;
     totalTracks = data.total;
-    for (const item of data.items) { if (item.track && !removedIds.has(item.track.id)) tracks.push(mapTrack(item.track)); }
+    for (const item of data.items) {
+      if (!item.track) {
+        const id = addedAtMap[item.added_at];
+        if (id) unavailableIds.add(id);
+        continue;
+      }
+      if (!removedIds.has(item.track.id)) tracks.push(mapTrack(item.track, item.added_at));
+    }
     currentOffset += data.items.length;
     setProgress(10 + (currentOffset / totalTracks) * 80);
     updateLibraryBar();
@@ -610,8 +628,9 @@ let _vsInitialized = false;
 
 function buildSongRow(t, idx) {
   const isBulk = selectedTrackIds.has(t.id);
+  const isUnavailable = unavailableIds.has(t.id);
   const row = document.createElement('div');
-  row.className = 'song-row' + (selectedTrackId === t.id ? ' active' : '') + (isBulk ? ' bulk-selected' : '');
+  row.className = 'song-row' + (selectedTrackId === t.id ? ' active' : '') + (isBulk ? ' bulk-selected' : '') + (isUnavailable ? ' unavailable' : '');
   row.style.top = (idx * ROW_H) + 'px';
   row.dataset.trackId = t.id;
   row.onclick = (e) => { if (e.ctrlKey || e.metaKey) { toggleBulkSelect(t.id); return; } selectTrack(t.id); };
@@ -1785,6 +1804,63 @@ function seekAudio(e) {
 }
 
 // ── EXPORT ──
+// ── HAMBURGER MENU ──
+function toggleHamburgerMenu() {
+  document.getElementById('hamburger-menu').classList.toggle('open');
+}
+function closeHamburgerMenu() {
+  document.getElementById('hamburger-menu').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  const btn = document.getElementById('hamburger-btn');
+  const menu = document.getElementById('hamburger-menu');
+  if (menu && btn && !menu.contains(e.target) && e.target !== btn) closeHamburgerMenu();
+});
+
+// ── UNSTREAMABLE MODAL ──
+function showUnstreamableModal() {
+  const modal = document.getElementById('unstreamable-modal');
+  const list = document.getElementById('unstreamable-list');
+  modal.classList.add('open');
+  const unavailable = tracks.filter(t => unavailableIds.has(t.id));
+  if (!unavailable.length) {
+    list.innerHTML = '<div style="font-size:0.78rem;color:#555;text-align:center;padding:1.5rem 0">No unavailable tracks detected yet.<br><span style="font-size:0.68rem">They\'ll appear here after a sync catches them.</span></div>';
+    return;
+  }
+  list.innerHTML = '';
+  unavailable.forEach(t => {
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:0.55rem 0;border-bottom:1px solid #1e1e1e;display:flex;flex-direction:column;gap:0.25rem';
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:0.82rem;color:#666;text-decoration:line-through';
+    title.textContent = t.title;
+    const artist = document.createElement('div');
+    artist.style.cssText = 'font-size:0.72rem;color:#444';
+    artist.textContent = t.artist;
+    const links = document.createElement('div');
+    links.style.cssText = 'display:flex;gap:0.4rem;margin-top:0.15rem';
+    const primaryArtist = t.artist.split(',')[0].trim();
+    const q = encodeURIComponent(primaryArtist + ' ' + t.title);
+    [
+      ['discogs', 'https://www.discogs.com/search/?q=' + q],
+      ['google', 'https://www.google.com/search?q=' + q],
+    ].forEach(([label, href]) => {
+      const a = document.createElement('a');
+      a.href = href; a.target = '_blank'; a.textContent = label + ' ↗';
+      a.className = 'detail-link';
+      links.appendChild(a);
+    });
+    row.append(title, artist, links);
+    list.appendChild(row);
+  });
+}
+function hideUnstreamableModal() {
+  document.getElementById('unstreamable-modal').classList.remove('open');
+}
+document.getElementById('unstreamable-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('unstreamable-modal')) hideUnstreamableModal();
+});
+
 function showBackupModal() { document.getElementById('export-modal').classList.add('open'); }
 function showExportModal() { showBackupModal(); }
 

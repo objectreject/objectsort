@@ -33,12 +33,19 @@
 <!-- MAIN APP -->
 <div id="app">
   <div id="topbar">
+    <div style="position:relative">
+      <button id="hamburger-btn" onclick="toggleHamburgerMenu()">☰</button>
+      <div id="hamburger-menu">
+        <button class="hmenu-item" onclick="showBackupModal();closeHamburgerMenu()">Backup</button>
+        <button class="hmenu-item" onclick="showUnstreamableModal();closeHamburgerMenu()">Unstreamable</button>
+        <hr class="hmenu-sep">
+        <button class="hmenu-item danger" onclick="logout()">Logout</button>
+      </div>
+    </div>
     <h1>objectsort</h1>
     <div class="stat-pill">Tagged: <span id="stat-tagged">0</span></div>
     <div class="stat-pill">Untagged: <span id="stat-untagged">0</span></div>
     <div class="spacer"></div>
-    <button class="btn-outline btn-sm" onclick="showBackupModal()" style="font-size:0.72rem">Backup</button>
-    <button class="btn-outline btn-sm" onclick="logout()" style="font-size:0.72rem">Logout</button>
   </div>
 
   <div id="backup-banner" style="display:none;align-items:center;gap:0.75rem;padding:0.4rem 1rem;background:#1a1200;border-bottom:1px solid #3a2800;flex-shrink:0">
@@ -249,6 +256,18 @@
         style="display:none;background:#f59e0b;border:none;border-radius:6px;color:#000;font-size:0.75rem;font-weight:700;cursor:pointer;padding:0.3rem 0.8rem;font-family:inherit;transition:background 0.15s"
         onmouseover="this.style.background='#fbbf24'" onmouseout="this.style.background='#f59e0b'">↗ Export Filtered View</button>
     </div>
+  </div>
+</div>
+
+<!-- UNSTREAMABLE MODAL -->
+<div id="unstreamable-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <strong style="font-size:0.9rem">Unstreamable</strong>
+      <button class="btn-outline btn-sm" onclick="hideUnstreamableModal()">✕</button>
+    </div>
+    <div style="font-size:0.72rem;color:#555;margin-bottom:0.9rem;line-height:1.5">Tracks that were in your Liked Songs but are no longer available on Spotify.</div>
+    <div id="unstreamable-list"></div>
   </div>
 </div>
 
