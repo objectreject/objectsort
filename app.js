@@ -1814,7 +1814,7 @@ function closeHamburgerMenu() {
 document.addEventListener('click', e => {
   const btn = document.getElementById('hamburger-btn');
   const menu = document.getElementById('hamburger-menu');
-  if (menu && btn && !menu.contains(e.target) && e.target !== btn) closeHamburgerMenu();
+  if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) closeHamburgerMenu();
 });
 
 // ── UNSTREAMABLE MODAL ──
